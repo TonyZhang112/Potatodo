@@ -16,11 +16,11 @@ def add_task():
             break
 
 def delete_task():
+    if not todo_list:
+        print("No tasks to delete.")
+        return
     while True:
         view_tasks() # Display tasks before deletion
-        if not todo_list:
-            print("No tasks to delete.")
-            return
         task_index = int(input('Enter the task number to delete: ')) - 1
         if 0 <= task_index < len(todo_list):
             deleted_task = todo_list.pop(task_index)
