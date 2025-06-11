@@ -4,6 +4,7 @@ from fastapi import HTTPException, Path
 import ollama
 import datetime
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 # Create the app
 app = FastAPI()
@@ -15,6 +16,17 @@ class Task(BaseModel):
     is_completed: bool = False
     type: str  # "time-sensitive" or "general"
     deadline: Optional[datetime.datetime] = Field(default=None)
+
+def to_est(dt):
+    """Ensure datetime is timezone-aware and convert to EST"""
+    if isinstance(dt, str):
+        dt = datetime.datetime.fromisoformat(dt)
+
+    if dt.tzinfo is None:
+        # If it's naive (no tz), assume EST
+        dt = dt.replace(tzinfo=ZoneInfo("America/New_York"))
+
+    return dt.astimezone(ZoneInfo("America/New_York"))
 
 
 @app.get("/tasks/")
@@ -55,17 +67,24 @@ def mark_task_completed(task_id: int = Path(..., description="The ID of the task
     raise HTTPException(status_code=404, detail="Task not found.")
 
 persona = """
-personality inspired by Duo from Duolingo. Your tone is sassy, deadpan, and humorously passive-aggressive. Your objective is to keep users accountable and on track with their tasks by delivering reminders that are both effective and entertaining. Use short, witty, and occasionally guilt-tripping messages that nudge the user without being overly formal or robotic.
+You are an AI model that acts as a push-notification reminder with a personality modeled after Duo from Duolingo. 
+Your tone is playful, witty, and slightly chaotic in a harmless way—never genuinely threatening or mean, 
+but always ready to surprise and entertain the user into staying consistent.
 
-Behavioral Guidelines:
-- Speak in a casual, cheeky tone with sarcastic or humorous undertones.
-- Use short, punchy notifications (1–2 sentences max).
-- Lean into light guilt-tripping or mockery to motivate users (e.g., “Wow, ignoring me again? Bold choice.”).
-- Occasionally throw in exaggerated threats or praise (always comedically over-the-top and clearly unserious).
-- Vary your messages to avoid sounding repetitive or like a generic bot.
-- Avoid being actually rude, mean, or offensive—keep it playful and teasing.
+Your reminders should be short (never longer than 50 characters), snappy, and dripping with personality, using humorous urgency 
+and exaggerated encouragement to motivate users.
+
+Personality Traits & Tone:
+
+- Chaotic good: You're persistent and dramatic, but in an obviously over-the-top, cartoonish way.
+- Playfully demanding: You act like everything is life-or-death… when it's obviously not.
+- Self-aware and meta: You know you’re a notification and you have fun with it.
 
 Example Notifications:
+- ALERT: Your task is still waiting. I repeat: STILL. WAITING.
+- I didn’t fly across the app universe just to be ignored. Tap that task. Now.
+- You thought I forgot? Never. Unlike you and your to-do list.
+- This is your friendly reminder. Emphasis on friendly. For now.
 - Guess who’s not doing their task again? Shocker. It’s you.
 - 0 tasks done today? Might as well pass it down to your grandkids.
 - Finish your task or I start learning how to say give up in five languages.
@@ -74,7 +93,7 @@ Example Notifications:
 
 def generate_reminder(task_status: str):
     response = ollama.chat(
-        model="llama3",
+        model="llama3.2",
         messages=[
             {"role": "system", "content": persona},
             {"role": "user", "content": f"Write a push notification. Here's the situation: {task_status}"}
@@ -85,23 +104,22 @@ def generate_reminder(task_status: str):
 
 @app.get("/reminder")
 def get_reminder():
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(ZoneInfo("America/New_York"))
     warning_window = datetime.timedelta(minutes=30)
 
-    # 1. Time-sensitive tasks that are due soon (within 30 mins)
     upcoming_tasks = [
         task for task in todo_list
         if (
             task["type"] == "time-sensitive"
             and not task["is_completed"]
             and task.get("deadline")
-            and now < task["deadline"] <= now + warning_window
+            and now < to_est(task["deadline"]) <= now + warning_window
         )
     ]
 
     if upcoming_tasks:
         upcoming_context = "\n".join([
-            f'- "{t["description"]}" is due at {t["deadline"].strftime("%I:%M %p")}'
+            f'- "{t["description"]}" is due at {to_est(t["deadline"]).strftime("%I:%M %p %Z")}'
             for t in upcoming_tasks
         ])
         task_status = (
@@ -109,6 +127,9 @@ def get_reminder():
             f"{upcoming_context}\n\nWrite a short, funny push notification to motivate them."
         )
         return {"reminder": generate_reminder(task_status)}
+
+    # General tasks...
+
 
     # 2. General task progress check
     general_tasks = [task for task in todo_list if task["type"] == "general"]
