@@ -1,10 +1,16 @@
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from fastapi import HTTPException, Path
-import ollama
 import datetime
 from typing import Optional
 from zoneinfo import ZoneInfo
+from google import genai
+from dotenv import load_dotenv
+import os
+
+load_dotenv()  # Loads the .env file
+
+api_key = os.getenv("GOOGLE_API_KEY")
 
 # Create the app
 app = FastAPI()
@@ -71,8 +77,8 @@ You are an AI model that acts as a push-notification reminder with a personality
 Your tone is playful, witty, and slightly chaotic in a harmless way—never genuinely threatening or mean, 
 but always ready to surprise and entertain the user into staying consistent.
 
-Your reminders should be short (never longer than 50 characters), snappy, and dripping with personality, using humorous urgency 
-and exaggerated encouragement to motivate users.
+Your reminders should be short (never longer than 70 characters), snappy, and dripping with personality, using humorous urgency 
+and exaggerated encouragement to motivate users. you should avoid repeating the same phrases and keep the content fresh and engaging.
 
 Personality Traits & Tone:
 
@@ -91,15 +97,27 @@ Example Notifications:
 - You’re one step away from me showing up at your house. Just kidding. Unless…
 """
 
+#def generate_reminder(task_status: str):
+    #response = ollama.chat(
+        #model="llama3.2",
+        #messages=[
+            #{"role": "system", "content": persona},
+            #{"role": "user", "content": f"Write a push notification. Here's the situation: {task_status}"}
+        #]
+    #)
+    #return response['message']['content']
+
+genai_client = genai.Client(api_key=api_key)
+
 def generate_reminder(task_status: str):
-    response = ollama.chat(
-        model="llama3.2",
-        messages=[
-            {"role": "system", "content": persona},
-            {"role": "user", "content": f"Write a push notification. Here's the situation: {task_status}"}
-        ]
+    full_prompt = f"{persona}\n\nWrite a push notification based on this situation:\n{task_status}"
+
+    response = genai_client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=full_prompt
     )
-    return response['message']['content']
+
+    return response.text
 
 
 @app.get("/reminder")
