@@ -1,0 +1,381 @@
+/* general styles */
+body {
+    border-radius: 24px;
+    padding: 20px;
+    height: calc(100vh - 4px); /* Account for border */
+    width: calc(100vw - 4px); /* Account for border */
+    box-sizing: border-box;
+    border: 4px solid #CA9D67;
+    background-color: #FFFAEF;
+    margin: auto;
+    overflow: hidden; /* Add this to prevent whole page scrolling */
+}
+
+/* Fixed sections that don't scroll */
+.title, .image-container, .ai-message-container, .main-buttons {
+    flex-shrink: 0; /* Keep these sections fixed */
+}
+
+.title {
+    position: absolute;
+    top: 5px;
+    left: 80%;
+    width:100%;
+    transform: translateX(-50%);
+    font-family: Fredoka; 
+    font-weight: 600;
+    font-size: 6px;
+    text-align: center;
+    margin: auto;
+    color: #CA9D67;
+}
+
+button:hover {
+    transform: scale(1.05); /* Slightly bigger on hover */
+    
+}
+
+button:active {
+    transform: scale(0.95); /* Slightly smaller when pressed */
+}
+
+/* home screen */
+.ai-message-container {
+    background-color: #FDECC0;
+    border-radius: 16px;
+    margin: auto;
+    text-align: center;
+    /* Fixed position and size */
+    position: sticky;
+    top: 20%;
+    left: 20px;
+    right: 20px;
+    z-index: 1;
+    height: 96px; /* Fixed height */
+    
+    /* Flexbox for centering text */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 15px;
+    box-sizing: border-box;
+    
+    /* FIXES from search results for sticky in flexbox */
+    align-self: flex-start; /* Key fix from search results */
+    flex-shrink: 0; /* Prevent shrinking */
+}
+
+
+#ai-message {
+    font-family: Fredoka; 
+    font-weight: 600;
+    font-size: 16px;
+    text-align: center;
+}
+
+.image-container{
+    position: relative;
+    z-index: 2;
+    top: 40px;
+    margin: auto;
+    text-align: center;
+    font-size: 36px;
+}
+
+#add-button {
+    position: fixed;
+    left: 25%;
+    top: 385px;
+    background-color: #CA9D67;
+    border-radius: 16px;
+    width: 160px;
+    height: 50px;
+    border: none;
+    font-size: 16px;
+    color: white;
+    cursor: pointer;
+    font-family: Fredoka; 
+    font-weight: 500;
+    font-size: 16px;
+    text-align: center;
+    transition: all 0.3s ease; /* Duration and timing */
+}
+
+/* add/edit task screen */
+.task-input-container {
+    padding:20px;
+    background-color: #FDECC0;
+    border-radius: 16px;
+    margin: auto;
+    text-align: center;
+       /* Fixed position and size */
+    position: absolute;
+    top: 60px;
+    left: 25px;
+    right: 25px;
+    z-index: 1;
+    height: 180px; /* Fixed height */
+    
+    /* Flexbox for centering text */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 15px;
+    box-sizing: border-box;
+    transition: all 0.1s ease;
+    cursor: text;
+}
+
+.task-input-container:focus-within{
+    outline: 3px solid #CA9D67; /* Highlight border when focused */
+}
+
+.task-input-container:hover{
+    outline: 3px solid #CA9D67;
+}
+
+#task-name {
+    background-color: transparent;
+    text-align: center;
+    margin: auto;
+    padding:0%;
+    width: 100%;
+    border: none;
+    font-family: Fredoka; 
+    font-weight: 600;
+    font-size: 18px;
+    outline: none;
+    resize: none;
+    overflow: none;
+}
+
+.hidden-inputs {
+    position: absolute;
+    left: -9999px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+
+.ddl-button{
+    position: absolute;
+    padding-left:10px;
+    top:250px;
+    left: 25px;
+    right: 25px;
+    height: 40px;
+    background-color: transparent;
+    border: none;
+    font-family: Fredoka;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center; /* Vertically centers icon and text */
+    justify-content: flex-start; /* Left-aligns the content as a group */
+    gap: 15px; /* Adds space between icon and text */
+    transition: all 0.1s ease;
+}
+
+.ddl-button:hover{
+    transform: scale(1);
+    outline: 2px solid #CA9D67;
+    border-radius: 16px;
+}
+
+/* Existing deadline button - NO background or border by default */
+.ddl-button.existing {
+    background-color: transparent; /* Same as default */
+    border: none; /* Same as default */
+    /* Only difference is the text content */
+}
+
+.ddl-button.existing:hover {
+    outline: 2px solid #CA9D67;
+    border-radius: 16px;
+}
+
+.reminder-button{
+    border: none;
+    position: absolute;
+    left: 25px;
+    right: 25px;
+    top:300px;
+    height: 40px;
+    padding-left:10px;
+    background-color: transparent;
+    font-family: Fredoka;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    display: flex;
+    align-items: center; /* Vertically centers icon and text */
+    justify-content: flex-start; /* Left-aligns the content as a group */
+    gap: 15px; /* Adds space between icon and text */
+}
+
+.reminder-button:hover{
+    transform: scale(1);
+    outline: 2px solid #CA9D67;
+    border-radius: 16px;
+}
+
+/* Existing reminder button - NO background or border by default */
+.reminder-button.existing {
+    background-color: transparent; /* Same as default */
+    border: none; /* Same as default */
+    /* Only difference is the text content */
+}
+
+.reminder-button.existing:hover {
+    outline: 2px solid #CA9D67;
+    border-radius: 16px;
+}
+
+.finish-edit {
+    position: fixed;
+    left: 25px;
+    top: 385px;
+    background-color: #CA9D67;
+    border-radius: 16px;
+    width: 190px;
+    height: 50px;
+    border: none;
+    font-size: 16px;
+    color: white;
+    cursor: pointer;
+    font-family: Fredoka; 
+    font-weight: 500;
+    font-size: 16px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.finish-add {
+    position: fixed;
+    left: 25%;
+    top: 385px;
+    background-color: #CA9D67;
+    border-radius: 16px;
+    width: 160px;
+    height: 50px;
+    border: none;
+    font-size: 16px;
+    color: white;
+    cursor: pointer;
+    font-family: Fredoka; 
+    font-weight: 500;
+    font-size: 16px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+.delete-button {
+    position: fixed;
+    right: 25px;
+    top: 385px;
+    background-color: #CA9D67;
+    border-radius: 16px;
+    width: 50px;
+    height: 50px;
+    border: none;
+    font-size: 10px;
+    color: white;
+    cursor: pointer;
+    font-family: Fredoka;
+    transition: all 0.1s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.delete-button:hover {
+    outline: 2px solid #CA9D67;
+}
+
+.back-button {
+    position : fixed;
+    top: 15px;
+    border: none;
+    background-color: transparent;
+    width: 24px;
+    height: 24px;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+/* Task display styles */
+.task-list {
+    margin: 35px 0px;
+    padding: 0;
+    max-height: 220px; /* Adjust this value */
+    overflow-y: auto;
+}
+
+.task-item {
+    display: flex;
+    align-items: center;
+    padding: 5px 0;
+    margin: 5px 0;
+    border-bottom: 1px solid #E0D0B8;
+}
+
+.task-item:last-child {
+    border-bottom: none;
+}
+
+.task-checkbox {
+    margin-right: 15px;
+    width: 18px;
+    height: 18px;
+    border:2px solid #CA9D67;
+}
+
+.task-name {
+    flex-grow: 1;
+    font-size: 18px;
+    font-family: Fredoka;
+    color: #333;
+}
+
+.task-reminder {
+    margin-right: 15px;
+    font-size: 18px;
+}
+
+.three-dots-menu {
+    background: none;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    padding: 5px;
+    color: #666;
+}
+
+.three-dots-menu:hover {
+    color: #333;
+}
+
+.round-add-button {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #D2B48C;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: white;
+}
+
+.round-add-button:hover {
+    background-color: #C19A6B;
+}
+
+.task-container {
+    margin: 20px 0;
+}
+
+.hidden {
+    display: none;
+}

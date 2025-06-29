@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet" />
+    <script src="script.js"></script>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; font-src 'self' https://fonts.gstatic.com; style-src 'self' https://fonts.googleapis.com;">
+    <title>Potatodo</title>
+</head>
+<body>
+    <div class="title">
+        <h1>Potatodo v0.01</h1>
+    </div>
+    <!-- Back button -->
+    <button class="back-button">←</button>
+    
+    <!-- Task name input -->
+    <div class="task-input-container">
+        <textarea type="text" id="task-name" class="task-input" placeholder="Enter task here..."></textarea>
+    </div>
+    
+    <!-- Action buttons -->
+    <div class="actions-container">
+        <button class="ddl-button">
+            <span id="ddl-icon">⚠️</span>
+            <span id="ddl-text">Add a deadline</span>
+        </button>
+        
+        <button class="reminder-button">
+            <span id="reminder-icon">🔔</span>
+            <span id="reminder-text">Add Reminder</span>
+        </button>
+    </div>
+    <div class="hidden-inputs">
+        <input type="datetime-local" id="deadline-picker">
+        <!-- Add this with your other hidden inputs -->
+        <input type="number" id="reminder-minutes" min="1" max="1440"> Minutes before ddl</input>
+    </div>
+    
+    <!-- Finish button -->
+    <button type= "button" class="finish-add">Add task</button>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet" />
+    <script src="script.js"></script>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; font-src 'self' https://fonts.gstatic.com; style-src 'self' https://fonts.googleapis.com;">
+    <title>Edit Task - Potatodo</title>
+</head>
+<body>
+    <div class="title">
+        <h1>Potatodo v0.01</h1>
+    </div>
+    
+    <button class="back-button">←</button>
+    
+    <div class="task-input-container">
+        <textarea id="task-name" class="task-input">Do the dishes</textarea>
+    </div>
+    
+    <!-- Action buttons that change based on existing data -->
+    <div class="actions-container">
+        <!-- Deadline section - will be populated by JavaScript -->
+        <div id="deadline-section" class="action-section">
+            <!-- JavaScript will put either "Add deadline" or "Deadline: 12:30 6/26/2025" here -->
+        </div>
+        
+        <!-- Reminder section - will be populated by JavaScript -->
+        <div id="reminder-section" class="action-section">
+            <!-- JavaScript will put either "Add reminder" or "Reminder: 30 mins before" here -->
+        </div>
+    </div>
+        <div class="hidden-inputs">
+        <input type="datetime-local" id="deadline-picker">
+        <!-- Add this with your other hidden inputs -->
+        <input type="number" id="reminder-minutes" min="1" max="1440"> Minutes before ddl</input>
+    </div>
+    
+    <button class="delete-button">delete</button>
+    <button class="finish-edit">Save changes</button>
+    
+</body>
+</html>
+
