@@ -44,11 +44,62 @@ function saveTasks(tasks) {
     localStorage.setItem('potatodo-tasks', JSON.stringify(tasks));
 }
 
-// Remove the old 'let tasks = [];' line completely
+// Function to toggle task completion status
+// Function to toggle task completion and auto-reorder
+function toggleTask(taskId) {
+    console.log('Toggling task:', taskId);
+    
+    const tasks = getTasks(); // Get from localStorage
+    const task = tasks.find(t => t.id === taskId);
+    
+    if (task) {
+        // Toggle the completed status
+        task.completed = !task.completed;
+        
+        // Auto-reorder: Move completed tasks to bottom
+        const reorderedTasks = reorderTasksByCompletion(tasks);
+        saveTasks(reorderedTasks); // Save reordered tasks
+        
+        console.log('Task', taskId, 'is now', task.completed ? 'completed' : 'incomplete');
+        
+        // Update the display with reordered tasks
+        const currentTasks = getTasks();
+        showTaskList(currentTasks);
+    }
+}
+
+// Function to reorder tasks: incomplete tasks first, completed tasks at bottom
+function reorderTasksByCompletion(tasks) {
+    // From the search results: separate active and completed tasks
+    const incompleteTasks = tasks.filter(task => !task.completed);
+    const completedTasks = tasks.filter(task => task.completed);
+    
+    // Return incomplete tasks first, then completed tasks at bottom
+    return [...incompleteTasks, ...completedTasks];
+}
+
+// Function to handle edit task - passes task data to edit screen
+function editTask(taskId) {
+    console.log('Edit task clicked for:', taskId);
+    
+    // Get the specific task data
+    const tasks = getTasks();
+    const task = tasks.find(t => t.id === taskId);
+    
+    if (task) {
+        console.log('Editing task:', task);
+        
+        // Store the task data for the edit screen to access
+        localStorage.setItem('editingTask', JSON.stringify(task));
+        
+        // Navigate to edit screen
+        window.location.href = 'edit-task.html';
+    } else {
+        console.error('Task not found:', taskId);
+    }
+}
 
 
-// Function to add a new task
-// CORRECTED addTask function for localStorage
 function addTask(taskData) {
     const tasks = getTasks(); // Get current tasks from localStorage
     const newTask = {
@@ -99,7 +150,7 @@ function showEmptyState() {
 }
 
 
-// Function to show task list (when tasks exist) - USING EXISTING HTML STRUCTURE
+// Function to show task list (when tasks exist) - WITH COMPLETION SUPPORT
 function showTaskList(tasks) {
     // Hide the "Add your first task" button
     const addButton = document.getElementById('add-button');
@@ -117,9 +168,9 @@ function showTaskList(tasks) {
         tasks.forEach(task => {
             const bellIcon = task.hasReminder ? '🔔' : '';
             
-            // Create task item element
+            // Create task item element with completion state
             const taskItem = document.createElement('div');
-            taskItem.className = 'task-item';
+            taskItem.className = `task-item ${task.completed ? 'completed' : ''}`;
             taskItem.innerHTML = `
                 <input type="checkbox" ${task.completed ? 'checked' : ''} 
                        class="task-checkbox" data-task-id="${task.id}">
@@ -159,12 +210,12 @@ function showTaskList(tasks) {
         roundButton.className = 'round-add-button';
         document.body.appendChild(roundButton);
         
-        // Add click listener to the + button
         roundButton.addEventListener('click', function() {
             window.location.href = 'add-task-screen.html';
         });
     }
 }
+
 
 // Function to handle the home page (index.html) - COMPLETE VERSION
 function setupHomePage() {

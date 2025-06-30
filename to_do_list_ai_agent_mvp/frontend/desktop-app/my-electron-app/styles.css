@@ -237,7 +237,7 @@ button:active {
     top: 385px;
     background-color: #CA9D67;
     border-radius: 16px;
-    width: 190px;
+    width: 220px;
     height: 50px;
     border: none;
     font-size: 16px;
@@ -310,12 +310,19 @@ button:active {
     overflow-y: auto;
 }
 
+.task-list-scroller {
+    position: relative;
+}
+
 .task-item {
     display: flex;
     align-items: center;
     padding: 5px 0;
     margin: 5px 0;
     border-bottom: 1px solid #E0D0B8;
+    transition: all 0.3s ease, transform 0.3s ease;
+    transform: translateY(0);
+    opacity: 1;
 }
 
 .task-item:last-child {
@@ -356,7 +363,7 @@ button:active {
 
 .round-add-button {
     position: fixed;
-    bottom: 30px;
+    bottom: 20px;
     right: 30px;
     width: 50px;
     height: 50px;
@@ -378,4 +385,20 @@ button:active {
 
 .hidden {
     display: none;
+}
+
+/* Completed task styling */
+.task-item.completed {
+    opacity: 0.6;
+    transition: all 0.3s ease, opacity 0.3s ease;
+}
+
+.task-item.completed .task-name {
+    text-decoration: line-through;
+    color: #C19A6B;
+    transition: color 0.3s ease, text-decoration 0.3s ease;
+}
+
+.task-item.completed .task-checkbox {
+    accent-color: #C19A6B;
 }
