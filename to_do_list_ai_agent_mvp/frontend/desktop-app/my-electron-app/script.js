@@ -157,31 +157,41 @@ function showTaskList(tasks) {
     if (addButton) {
         addButton.classList.add('hidden');
     }
-    
+
     // Use your existing task-list div
     const taskListContainer = document.querySelector('.task-list');
-    
     if (taskListContainer) {
         // Clear any existing content and add tasks
         taskListContainer.innerHTML = '';
         
         tasks.forEach(task => {
-            const bellIcon = task.hasReminder ? '🔔' : '';
-            
             // Create task item element with completion state
             const taskItem = document.createElement('div');
             taskItem.className = `task-item ${task.completed ? 'completed' : ''}`;
-            taskItem.innerHTML = `
-                <input type="checkbox" ${task.completed ? 'checked' : ''} 
-                       class="task-checkbox" data-task-id="${task.id}">
+            
+            // Build the task content with reminder and deadline indicators
+            let taskContent = `
+                <input type="checkbox" class="task-checkbox" data-task-id="${task.id}" ${task.completed ? 'checked' : ''}>
                 <span class="task-name">${task.name}</span>
-                <span class="task-reminder">${bellIcon}</span>
-                <button class="three-dots-menu" data-task-id="${task.id}">⋮</button>
             `;
             
+            // Add bell icon if task has reminder
+            if (task.reminderMinutes) {
+                taskContent += `<span class="reminder-indicator">🔔</span>`;
+            }
+            
+            // Add deadline indicator if task has deadline
+            if (task.deadline) {
+                const deadlineDate = new Date(task.deadline);
+                taskContent += `<span class="deadline-indicator">📅</span>`;
+            }
+            
+            taskContent += `<button class="three-dots-menu" data-task-id="${task.id}">⋮</button>`;
+            
+            taskItem.innerHTML = taskContent;
             taskListContainer.appendChild(taskItem);
         });
-        
+
         // Add event listeners to checkboxes
         const checkboxes = taskListContainer.querySelectorAll('.task-checkbox');
         checkboxes.forEach(checkbox => {
@@ -190,7 +200,7 @@ function showTaskList(tasks) {
                 toggleTask(taskId);
             });
         });
-        
+
         // Add event listeners to three-dot buttons
         const threeDotButtons = taskListContainer.querySelectorAll('.three-dots-menu');
         threeDotButtons.forEach(button => {
@@ -200,7 +210,7 @@ function showTaskList(tasks) {
             });
         });
     }
-    
+
     // Add the round "+" button at the bottom
     let roundButton = document.getElementById('add-more-button');
     if (!roundButton) {
@@ -598,9 +608,6 @@ function saveReminderValue(input, container) {
     // Remove the container
     container.remove();
 }
-
-
-
 
 // Function to handle the edit task page
 function setupEditTaskPage() {
