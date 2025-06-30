@@ -257,7 +257,27 @@ function setupAddTaskPage() {
             window.location.href = 'index.html';
         });
     }
-    
+
+    // Handle deadline button
+    const deadlineButton = document.querySelector('.ddl-button');
+    if (deadlineButton) {
+        deadlineButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Deadline button clicked');
+            handleDeadlineClick();
+        });
+    }
+
+    // Handle reminder button  
+    const reminderButton = document.querySelector('.reminder-button');
+    if (reminderButton) {
+        reminderButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Reminder button clicked');
+            handleReminderClick();
+        });
+    }
+
     // Handle the "Add task" button
     const addTaskButton = document.querySelector('.finish-add');
     if (addTaskButton) {
@@ -277,13 +297,19 @@ function setupAddTaskPage() {
                 const newTask = {
                     name: taskName,
                     hasReminder: false,
-                    deadline: null,
-                    reminderMinutes: null
+                    deadline: window.currentDeadline || null,  // Add the deadline we stored
+                    reminderMinutes: window.currentReminderMinutes || null
                 };
+                
+                console.log('Creating task with deadline:', window.currentDeadline);
                 
                 addTask(newTask);
                 console.log('Task added successfully:', newTask);
                 console.log('All tasks now:', getTasks());
+                
+                // 🧹 CLEANUP - Add this section
+                window.currentDeadline = null;
+                hideDeadlineInputs();
                 
                 // RESTORE NAVIGATION - Go back to home screen
                 window.location.href = 'index.html';
@@ -297,6 +323,254 @@ function setupAddTaskPage() {
         console.error('Add task button not found!');
     }
 }
+
+function handleDeadlineClick() {
+    console.log('Handling deadline click...');
+    
+    // Create date input if it doesn't exist
+    let dateInput = document.querySelector('#deadline-date-input');
+    if (!dateInput) {
+        dateInput = document.createElement('input');
+        dateInput.type = 'date';
+        dateInput.id = 'deadline-date-input';
+        dateInput.className = 'deadline-input';
+        
+        // Style the date input
+        dateInput.style.position = 'fixed';
+        dateInput.style.top = '250px';
+        dateInput.style.left = '25px';
+        dateInput.style.right = '25px';
+        dateInput.style.padding = '10px';
+        dateInput.style.fontSize = '16px';
+        dateInput.style.border = '1px solid #CA9D67';
+        dateInput.style.borderRadius = '8px';
+        dateInput.style.backgroundColor = '#FFFFFF';
+        
+        document.body.appendChild(dateInput);
+    }
+    
+    // Create time input if it doesn't exist
+    let timeInput = document.querySelector('#deadline-time-input');
+    if (!timeInput) {
+        timeInput = document.createElement('input');
+        timeInput.type = 'time';
+        timeInput.id = 'deadline-time-input';
+        timeInput.className = 'deadline-input';
+        
+        // Style the time input
+        timeInput.style.position = 'fixed';
+        timeInput.style.top = '300px';
+        timeInput.style.left = '25px';
+        timeInput.style.right = '25px';
+        timeInput.style.padding = '10px';
+        timeInput.style.fontSize = '16px';
+        timeInput.style.border = '1px solid #ccc';
+        timeInput.style.borderRadius = '8px';
+        dateInput.style.backgroundColor = '#FFFFFF';
+        
+        document.body.appendChild(timeInput);
+    }
+    
+    // Create a "Set Deadline" button if it doesn't exist
+    let setButton = document.querySelector('#set-deadline-button');
+    if (!setButton) {
+        setButton = document.createElement('button');
+        setButton.id = 'set-deadline-button';
+        setButton.textContent = 'Set Deadline';
+        setButton.className = 'set-deadline-btn';
+        
+        // Style the button
+        setButton.style.position = 'fixed';
+        setButton.style.top = '385px';
+        setButton.style.left = '85px';
+        setButton.style.right = '95px';
+        setButton.style.height = '50px';
+        setButton.style.padding = '12px';
+        setButton.style.backgroundColor = '#CA9D67';
+        setButton.style.color = 'white';
+        setButton.style.border = 'none';
+        setButton.style.borderRadius = '8px';
+        setButton.style.fontSize = '16px';
+        setButton.style.fontfamily = 'Fredoka';
+        setButton.style.fontWeight = 'bold';
+        setButton.style.cursor = 'pointer';
+        
+        // Add click handler
+        setButton.addEventListener('click', function() {
+            saveDeadlineSelection();
+        });
+        
+        document.body.appendChild(setButton);
+    }
+    
+    // Show all inputs
+    dateInput.style.display = 'block';
+    timeInput.style.display = 'block';
+    setButton.style.display = 'block';
+    
+    // Focus on date input
+    dateInput.focus();
+}
+
+function saveDeadlineSelection() {
+    const dateInput = document.querySelector('#deadline-date-input');
+    const timeInput = document.querySelector('#deadline-time-input');
+    
+    const selectedDate = dateInput.value;
+    const selectedTime = timeInput.value;
+    
+    console.log('Selected date:', selectedDate);
+    console.log('Selected time:', selectedTime);
+    
+    if (selectedDate && selectedTime) {
+        // Combine date and time
+        const deadlineDateTime = `${selectedDate} ${selectedTime}`;
+        console.log('Full deadline:', deadlineDateTime);
+        
+        // Update the deadline button text
+        const deadlineButton = document.querySelector('.ddl-button');
+        if (deadlineButton) {
+            deadlineButton.textContent = `📅 ${selectedDate} at ${selectedTime}`;
+        }
+        
+        // Store the deadline data (we'll use this when saving the task)
+        window.currentDeadline = deadlineDateTime;
+        
+        // Hide the inputs
+        hideDeadlineInputs();
+        
+        alert('Deadline set successfully!');
+    } else {
+        alert('Please select both date and time!');
+    }
+}
+
+function hideDeadlineInputs() {
+    const dateInput = document.querySelector('#deadline-date-input');
+    const timeInput = document.querySelector('#deadline-time-input');
+    const setButton = document.querySelector('#set-deadline-button');
+    
+    if (dateInput) dateInput.style.display = 'none';
+    if (timeInput) timeInput.style.display = 'none';
+    if (setButton) setButton.style.display = 'none';
+}
+
+
+function handleReminderClick() {
+    console.log('=== REMINDER BUTTON CLICKED ===');
+    
+    // Remove any existing reminder container first
+    const existingContainer = document.querySelector('#reminder-container');
+    if (existingContainer) {
+        existingContainer.remove();
+    }
+    
+    // Create fresh container
+    const reminderContainer = document.createElement('div');
+    reminderContainer.id = 'reminder-container';
+    reminderContainer.className = 'reminder-container';
+    
+    // Use simple text input - most reliable approach
+    reminderContainer.innerHTML = `
+        <h3>Set Reminder</h3>
+        <div class="reminder-input-group">
+            <input type="text" id="reminder-minutes" value="15" placeholder="15">
+            <span>minutes before the deadline</span>
+        </div>
+        <button class="set-reminder-btn">Set Reminder</button>
+        <button class="cancel-reminder">Cancel</button>
+    `;
+    
+    document.body.appendChild(reminderContainer);
+    
+    // Add event listeners with bulletproof validation
+    const setButton = reminderContainer.querySelector('.set-reminder-btn');
+    setButton.addEventListener('click', function() {
+        console.log('=== SET REMINDER CLICKED ===');
+        const minutesInput = document.querySelector('#reminder-minutes');
+        
+        const rawValue = minutesInput.value.trim();
+        console.log('Raw value:', `"${rawValue}"`);
+        
+        // Simple regex check for numbers only
+        if (!/^\d+$/.test(rawValue)) {
+            alert('Please enter numbers only!');
+            return;
+        }
+        
+        const minutes = parseInt(rawValue, 10);
+        console.log('Parsed minutes:', minutes);
+        
+        if (minutes > 0 && minutes <= 10080) {
+            console.log('✅ Setting reminder for', minutes, 'minutes');
+            setReminder(minutes);
+        } else {
+            alert('Please enter a number between 1 and 10080!');
+        }
+    });
+    
+    const cancelButton = reminderContainer.querySelector('.cancel-reminder');
+    cancelButton.addEventListener('click', function() {
+        hideReminderContainer();
+    });
+    
+    // Show container and focus input
+    reminderContainer.style.display = 'block';
+    
+    setTimeout(() => {
+        const minutesInput = document.querySelector('#reminder-minutes');
+        minutesInput.focus();
+        minutesInput.select();
+    }, 100);
+}
+
+
+function setReminder(minutes) {
+    console.log('Setting reminder for', minutes, 'minutes before deadline');
+    
+    // Update the reminder button text
+    const reminderButton = document.querySelector('.reminder-button');
+    if (reminderButton) {
+        reminderButton.textContent = `🔔 ${minutes} min before deadline`;
+    }
+    
+    // Store the reminder data
+    window.currentReminderMinutes = minutes;
+    
+    // Hide the reminder container
+    hideReminderContainer();
+    
+    alert(`Reminder set for ${minutes} minutes before deadline!`);
+}
+
+
+
+function setReminder(minutes, displayText) {
+    console.log('Setting reminder for', minutes, 'minutes before');
+    
+    // Update the reminder button text
+    const reminderButton = document.querySelector('.reminder-button');
+    if (reminderButton) {
+        reminderButton.textContent = `🔔 ${displayText}`;
+    }
+    
+    // Store the reminder data
+    window.currentReminderMinutes = minutes;
+    
+    // Hide the reminder container
+    hideReminderContainer();
+    
+    alert(`Reminder set for ${displayText}!`);
+}
+
+function hideReminderContainer() {
+    const reminderContainer = document.querySelector('#reminder-container');
+    if (reminderContainer) {
+        reminderContainer.style.display = 'none';
+    }
+}
+
+
 
 // Function to handle the edit task page
 function setupEditTaskPage() {
