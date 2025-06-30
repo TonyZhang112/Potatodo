@@ -309,6 +309,7 @@ function setupAddTaskPage() {
                 
                 // 🧹 CLEANUP - Add this section
                 window.currentDeadline = null;
+                window.currentReminderMinutes = null;
                 hideDeadlineInputs();
                 
                 // RESTORE NAVIGATION - Go back to home screen
@@ -366,7 +367,7 @@ function handleDeadlineClick() {
         timeInput.style.fontSize = '16px';
         timeInput.style.border = '1px solid #ccc';
         timeInput.style.borderRadius = '8px';
-        dateInput.style.backgroundColor = '#FFFFFF';
+        timeInput.style.backgroundColor = '#FFFFFF';
         
         document.body.appendChild(timeInput);
     }
@@ -382,8 +383,8 @@ function handleDeadlineClick() {
         // Style the button
         setButton.style.position = 'fixed';
         setButton.style.top = '385px';
-        setButton.style.left = '85px';
-        setButton.style.right = '95px';
+        setButton.style.left = '25px';
+        setButton.style.width = '55%';
         setButton.style.height = '50px';
         setButton.style.padding = '12px';
         setButton.style.backgroundColor = '#CA9D67';
@@ -391,8 +392,8 @@ function handleDeadlineClick() {
         setButton.style.border = 'none';
         setButton.style.borderRadius = '8px';
         setButton.style.fontSize = '16px';
-        setButton.style.fontfamily = 'Fredoka';
-        setButton.style.fontWeight = 'bold';
+        setButton.style.fontFamily = 'Fredoka';
+        setButton.style.fontWeight = '500px';
         setButton.style.cursor = 'pointer';
         
         // Add click handler
@@ -403,14 +404,58 @@ function handleDeadlineClick() {
         document.body.appendChild(setButton);
     }
     
-    // Show all inputs
+    // Create a "Cancel" button if it doesn't exist
+    let cancelButton = document.querySelector('#cancel-deadline-button');
+    if (!cancelButton) {
+        cancelButton = document.createElement('button');
+        cancelButton.id = 'cancel-deadline-button';
+        cancelButton.textContent = 'Cancel';
+        cancelButton.className = 'cancel-deadline-btn';
+        
+        // Style the cancel button
+        cancelButton.style.position = 'fixed';
+        cancelButton.style.top = '385px';
+        cancelButton.style.right = '25px';
+        cancelButton.style.width = '30%';
+        cancelButton.style.height = '50px';
+        cancelButton.style.padding = '12px';
+        cancelButton.style.backgroundColor = '#ff3b30';
+        cancelButton.style.color = 'white';
+        cancelButton.style.border = 'none';
+        cancelButton.style.borderRadius = '8px';
+        cancelButton.style.fontSize = '16px';
+        cancelButton.style.fontFamily = 'Fredoka';
+        cancelButton.style.fontWeight = 'bold';
+        cancelButton.style.cursor = 'pointer';
+        
+        // Add click handler
+        cancelButton.addEventListener('click', function() {
+            cancelDeadlineSelection();
+        });
+        
+        document.body.appendChild(cancelButton);
+    }
+    
+    // Show all inputs and buttons
     dateInput.style.display = 'block';
     timeInput.style.display = 'block';
     setButton.style.display = 'block';
+    cancelButton.style.display = 'block';
     
     // Focus on date input
     dateInput.focus();
 }
+
+function cancelDeadlineSelection() {
+    console.log('Deadline selection cancelled');
+    
+    // Hide all deadline inputs and buttons
+    hideDeadlineInputs();
+    
+    // Clear any stored deadline data
+    window.currentDeadline = null;
+}
+
 
 function saveDeadlineSelection() {
     const dateInput = document.querySelector('#deadline-date-input');
@@ -430,7 +475,7 @@ function saveDeadlineSelection() {
         // Update the deadline button text
         const deadlineButton = document.querySelector('.ddl-button');
         if (deadlineButton) {
-            deadlineButton.textContent = `📅 ${selectedDate} at ${selectedTime}`;
+            deadlineButton.textContent = `📅${selectedDate} at ${selectedTime}`;
         }
         
         // Store the deadline data (we'll use this when saving the task)
@@ -449,126 +494,111 @@ function hideDeadlineInputs() {
     const dateInput = document.querySelector('#deadline-date-input');
     const timeInput = document.querySelector('#deadline-time-input');
     const setButton = document.querySelector('#set-deadline-button');
+    const cancelButton = document.querySelector('#cancel-deadline-button');
     
     if (dateInput) dateInput.style.display = 'none';
     if (timeInput) timeInput.style.display = 'none';
     if (setButton) setButton.style.display = 'none';
+    if (cancelButton) cancelButton.style.display = 'none';
 }
 
 
 function handleReminderClick() {
-    console.log('=== REMINDER BUTTON CLICKED ===');
+    // Clear any previous reminder value first
+    window.currentReminderMinutes = null;
     
-    // Remove any existing reminder container first
-    const existingContainer = document.querySelector('#reminder-container');
+    // Remove any existing reminder input first
+    const existingContainer = document.querySelector('#reminder-input-container');
     if (existingContainer) {
         existingContainer.remove();
+        return;
     }
     
-    // Create fresh container
-    const reminderContainer = document.createElement('div');
-    reminderContainer.id = 'reminder-container';
-    reminderContainer.className = 'reminder-container';
+    // Get the reminder button position
+    const reminderButton = document.querySelector('.reminder-button');
+    const buttonRect = reminderButton.getBoundingClientRect();
     
-    // Use simple text input - most reliable approach
-    reminderContainer.innerHTML = `
-        <h3>Set Reminder</h3>
-        <div class="reminder-input-group">
-            <input type="text" id="reminder-minutes" value="15" placeholder="15">
-            <span>minutes before the deadline</span>
-        </div>
-        <button class="set-reminder-btn">Set Reminder</button>
-        <button class="cancel-reminder">Cancel</button>
-    `;
+    // Create a container for input + text
+    const container = document.createElement('div');
+    container.id = 'reminder-input-container';
+    container.style.position = 'fixed';
+    container.style.top = buttonRect.bottom + 10 + 'px';
+    container.style.left = buttonRect.left + 'px';
+    container.style.display = 'flex';
+    container.style.alignItems = 'center';
+    container.style.backgroundColor = 'white';
+    container.style.padding = '8px';
+    container.style.border = '1px solid #ccc';
+    container.style.borderRadius = '6px';
+    container.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+    container.style.zIndex = '1000';
     
-    document.body.appendChild(reminderContainer);
+    // Create the input with default value
+    const input = document.createElement('input');
+    input.id = 'simple-reminder-input';
+    input.type = 'text';
+    input.value = '15'; // Always start with default
+    input.style.width = '40px';
+    input.style.padding = '4px';
+    input.style.border = '1px solid #ddd';
+    input.style.borderRadius = '4px';
+    input.style.textAlign = 'center';
+    input.style.marginRight = '8px';
     
-    // Add event listeners with bulletproof validation
-    const setButton = reminderContainer.querySelector('.set-reminder-btn');
-    setButton.addEventListener('click', function() {
-        console.log('=== SET REMINDER CLICKED ===');
-        const minutesInput = document.querySelector('#reminder-minutes');
-        
-        const rawValue = minutesInput.value.trim();
-        console.log('Raw value:', `"${rawValue}"`);
-        
-        // Simple regex check for numbers only
-        if (!/^\d+$/.test(rawValue)) {
-            alert('Please enter numbers only!');
-            return;
-        }
-        
-        const minutes = parseInt(rawValue, 10);
-        console.log('Parsed minutes:', minutes);
-        
-        if (minutes > 0 && minutes <= 10080) {
-            console.log('✅ Setting reminder for', minutes, 'minutes');
-            setReminder(minutes);
-        } else {
-            alert('Please enter a number between 1 and 10080!');
+    // Create the text
+    const text = document.createElement('span');
+    text.textContent = 'mins before ddl';
+    text.style.fontSize = '14px';
+    text.style.color = '#666';
+    text.style.whiteSpace = 'nowrap';
+    
+    // Add input and text to container
+    container.appendChild(input);
+    container.appendChild(text);
+    document.body.appendChild(container);
+    
+    // Focus and select the input
+    input.focus();
+    input.select();
+    
+    // Handle Enter key or blur to save
+    input.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveReminderValue(input, container);
         }
     });
     
-    const cancelButton = reminderContainer.querySelector('.cancel-reminder');
-    cancelButton.addEventListener('click', function() {
-        hideReminderContainer();
+    input.addEventListener('blur', function() {
+        setTimeout(() => saveReminderValue(input, container), 100);
     });
     
-    // Show container and focus input
-    reminderContainer.style.display = 'block';
-    
-    setTimeout(() => {
-        const minutesInput = document.querySelector('#reminder-minutes');
-        minutesInput.focus();
-        minutesInput.select();
-    }, 100);
+    // Handle clicking outside to close
+    document.addEventListener('click', function closeOnClickOutside(e) {
+        if (!container.contains(e.target) && e.target !== reminderButton) {
+            saveReminderValue(input, container);
+            document.removeEventListener('click', closeOnClickOutside);
+        }
+    });
 }
 
-
-function setReminder(minutes) {
-    console.log('Setting reminder for', minutes, 'minutes before deadline');
+function saveReminderValue(input, container) {
+    const value = input.value.trim();
+    const minutes = parseInt(value);
     
-    // Update the reminder button text
-    const reminderButton = document.querySelector('.reminder-button');
-    if (reminderButton) {
-        reminderButton.textContent = `🔔 ${minutes} min before deadline`;
+    if (!isNaN(minutes) && minutes > 0) {
+        // Update button text
+        const reminderButton = document.querySelector('.reminder-button');
+        reminderButton.textContent = `🔔 ${minutes} min before ddl`;
+        
+        // Store the value
+        window.currentReminderMinutes = minutes;
     }
     
-    // Store the reminder data
-    window.currentReminderMinutes = minutes;
-    
-    // Hide the reminder container
-    hideReminderContainer();
-    
-    alert(`Reminder set for ${minutes} minutes before deadline!`);
+    // Remove the container
+    container.remove();
 }
 
-
-
-function setReminder(minutes, displayText) {
-    console.log('Setting reminder for', minutes, 'minutes before');
-    
-    // Update the reminder button text
-    const reminderButton = document.querySelector('.reminder-button');
-    if (reminderButton) {
-        reminderButton.textContent = `🔔 ${displayText}`;
-    }
-    
-    // Store the reminder data
-    window.currentReminderMinutes = minutes;
-    
-    // Hide the reminder container
-    hideReminderContainer();
-    
-    alert(`Reminder set for ${displayText}!`);
-}
-
-function hideReminderContainer() {
-    const reminderContainer = document.querySelector('#reminder-container');
-    if (reminderContainer) {
-        reminderContainer.style.display = 'none';
-    }
-}
 
 
 
