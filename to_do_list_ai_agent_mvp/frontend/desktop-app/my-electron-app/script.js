@@ -513,7 +513,16 @@ function hideDeadlineInputs() {
 }
 
 
+// Main reminder click handler
 function handleReminderClick() {
+    const reminderButton = document.querySelector('.reminder-button');
+    
+    // Check if reminder is already set
+    if (window.currentReminderMinutes) {
+        showReminderOptions();
+        return;
+    }
+    
     // Clear any previous reminder value first
     window.currentReminderMinutes = null;
     
@@ -525,7 +534,6 @@ function handleReminderClick() {
     }
     
     // Get the reminder button position
-    const reminderButton = document.querySelector('.reminder-button');
     const buttonRect = reminderButton.getBoundingClientRect();
     
     // Create a container for input + text
@@ -547,7 +555,7 @@ function handleReminderClick() {
     const input = document.createElement('input');
     input.id = 'simple-reminder-input';
     input.type = 'text';
-    input.value = '15'; // Always start with default
+    input.value = '15';
     input.style.width = '40px';
     input.style.padding = '4px';
     input.style.border = '1px solid #ddd';
@@ -555,11 +563,21 @@ function handleReminderClick() {
     input.style.textAlign = 'center';
     input.style.marginRight = '8px';
     
-    // Create the text
+    // Create dynamic text based on whether deadline exists
     const text = document.createElement('span');
-    text.textContent = 'mins before ddl';
+    const hasDeadline = window.currentDeadline;
+    
+    if (hasDeadline) {
+        text.textContent = 'mins before deadline';
+        text.style.color = 'black';
+        text.style.fontFamily = 'Fredoka, sans-serif';
+    } else {
+        text.textContent = 'mins from now';
+        text.style.color = 'black';
+        text.style.fontFamily = 'Fredoka, sans-serif';
+    }
+    
     text.style.fontSize = '14px';
-    text.style.color = '#666';
     text.style.whiteSpace = 'nowrap';
     
     // Add input and text to container
@@ -592,14 +610,21 @@ function handleReminderClick() {
     });
 }
 
+// Save reminder value
 function saveReminderValue(input, container) {
     const value = input.value.trim();
     const minutes = parseInt(value);
     
     if (!isNaN(minutes) && minutes > 0) {
-        // Update button text
+        // Update button text based on context
         const reminderButton = document.querySelector('.reminder-button');
-        reminderButton.textContent = `🔔 ${minutes} min before ddl`;
+        const hasDeadline = window.currentDeadline;
+        
+        if (hasDeadline) {
+            reminderButton.textContent = `🔔 ${minutes} min before deadline`;
+        } else {
+            reminderButton.textContent = `🔔 Remind in ${minutes} min`;
+        }
         
         // Store the value
         window.currentReminderMinutes = minutes;
@@ -608,6 +633,143 @@ function saveReminderValue(input, container) {
     // Remove the container
     container.remove();
 }
+
+// Show options for existing reminder (edit/delete)
+function showReminderOptions() {
+    const reminderButton = document.querySelector('.reminder-button');
+    const buttonRect = reminderButton.getBoundingClientRect();
+    
+    // Remove any existing options container
+    const existingOptions = document.querySelector('#reminder-options-container');
+    if (existingOptions) {
+        existingOptions.remove();
+        return;
+    }
+    
+    // Create options container
+    const container = document.createElement('div');
+    container.id = 'reminder-options-container';
+    container.style.position = 'fixed';
+    container.style.top = buttonRect.bottom + 5 + 'px';
+    container.style.left = buttonRect.left + 'px';
+    container.style.height = '100px'
+    container.style.width = '10px'
+    container.style.backgroundColor = '#FFFAEF';
+    container.style.border = '2px solid #C19A6B';
+    container.style.borderRadius = '6px';
+    container.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+    container.style.zIndex = '1000';
+    container.style.padding = '8px';
+    container.style.display = 'flex';
+    container.style.flexDirection = 'column';
+    container.style.gap = '8px';
+    container.style.minWidth = '120px';
+    
+    // Edit button
+    const editButton = document.createElement('button');
+    editButton.textContent = 'Edit';
+    editButton.margin= 'auto';
+    editButton.style.width = '120px'
+    editButton.style.padding = '5px';
+    editButton.style.border = '1px solid #C19A6B';
+    editButton.style.backgroundColor = '#FFFAEF';
+    editButton.style.color = 'black';
+    editButton.style.borderRadius = '4px';
+    editButton.style.cursor = 'pointer';
+    editButton.style.fontSize = '14px';
+    
+    // Delete button
+    const deleteButton = document.createElement('button');
+    deleteButton.textContent = 'Delete';
+    deleteButton.margin= 'auto';
+    deleteButton.style.width = '120px'
+    deleteButton.style.padding = '5px';
+    deleteButton.style.border = '1px solid #ff3b30';
+    deleteButton.style.backgroundColor = '#FFFAEF';
+    deleteButton.style.color = '#ff3b30';
+    deleteButton.style.borderRadius = '4px';
+    deleteButton.style.cursor = 'pointer';
+    deleteButton.style.fontSize = '14px';
+    
+    // Cancel button
+    const cancelButton = document.createElement('button');
+    cancelButton.textContent = 'Cancel';
+    cancelButton.margin= 'auto';
+    cancelButton.style.padding = '5px';
+    cancelButton.style.width = '120px'
+    cancelButton.style.border = '1px solid #666';
+    cancelButton.style.backgroundColor = '#FFFAEF';
+    cancelButton.style.color = '#666';
+    cancelButton.style.borderRadius = '4px';
+    cancelButton.style.cursor = 'pointer';
+    cancelButton.style.fontSize = '14px';
+    
+    // Add hover effects
+    [editButton, deleteButton, cancelButton].forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            this.style.opacity = '0.8';
+        });
+        button.addEventListener('mouseleave', function() {
+            this.style.opacity = '1';
+        });
+    });
+    
+    // Add event listeners
+    editButton.addEventListener('click', function() {
+        container.remove();
+        editExistingReminder();
+    });
+    
+    deleteButton.addEventListener('click', function() {
+        container.remove();
+        deleteReminder();
+    });
+    
+    cancelButton.addEventListener('click', function() {
+        container.remove();
+    });
+    
+    // Add buttons to container
+    container.appendChild(editButton);
+    container.appendChild(deleteButton);
+    container.appendChild(cancelButton);
+    
+    document.body.appendChild(container);
+    
+    // Close when clicking outside
+    setTimeout(() => {
+        document.addEventListener('click', function closeOptions(e) {
+            if (!container.contains(e.target) && e.target !== reminderButton) {
+                container.remove();
+                document.removeEventListener('click', closeOptions);
+            }
+        });
+    }, 100);
+}
+
+// Edit existing reminder
+function editExistingReminder() {
+    // Clear the current reminder and show input again
+    window.currentReminderMinutes = null;
+    const reminderButton = document.querySelector('.reminder-button');
+    reminderButton.textContent = '🔔 Add Reminder';
+    
+    // Trigger the normal reminder input
+    setTimeout(() => {
+        handleReminderClick();
+    }, 100);
+}
+
+// Delete reminder
+function deleteReminder() {
+    // Clear the reminder completely
+    window.currentReminderMinutes = null;
+    const reminderButton = document.querySelector('.reminder-button');
+    reminderButton.textContent = '🔔 Add Reminder';
+    
+    console.log('Reminder deleted');
+}
+
 
 // Function to handle the edit task page
 function setupEditTaskPage() {
