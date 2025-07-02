@@ -16,20 +16,13 @@
     <button class="back-button">←</button>
     
     <div class="task-input-container">
-        <textarea id="task-name" class="task-input"></textarea>
+        <textarea id="task-name" class="task-input">Do the dishes</textarea>
     </div>
     
     <!-- Action buttons that change based on existing data -->
-    <div class="actions-container">
-        <!-- Deadline section - will be populated by JavaScript -->
-        <div id="deadline-section" class="action-section">
-            <!-- JavaScript will put either "Add deadline" or "Deadline: 12:30 6/26/2025" here -->
-        </div>
-        
-        <!-- Reminder section - will be populated by JavaScript -->
-        <div id="reminder-section" class="action-section">
-            <!-- JavaScript will put either "Add reminder" or "Reminder: 30 mins before" here -->
-        </div>
+    <div class="task-options">
+        <button class="ddl-button">📅 Add a deadline</button>
+        <button class="reminder-button">🔔 Add Reminder</button>
     </div>
         <div class="hidden-inputs">
         <input type="datetime-local" id="deadline-picker">
