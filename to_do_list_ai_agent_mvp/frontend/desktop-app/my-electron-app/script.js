@@ -348,9 +348,9 @@ function handleDeadlineClick() {
         
         // Style the date input
         dateInput.style.position = 'fixed';
-        dateInput.style.top = '250px';
-        dateInput.style.left = '25px';
-        dateInput.style.right = '25px';
+        dateInput.style.top = '50%';
+        dateInput.style.left = '10%';
+        dateInput.style.right = '10%';
         dateInput.style.padding = '10px';
         dateInput.style.fontSize = '16px';
         dateInput.style.border = '1px solid #CA9D67';
@@ -370,9 +370,9 @@ function handleDeadlineClick() {
         
         // Style the time input
         timeInput.style.position = 'fixed';
-        timeInput.style.top = '300px';
-        timeInput.style.left = '25px';
-        timeInput.style.right = '25px';
+        timeInput.style.top = '60%';
+        timeInput.style.left = '10%';
+        timeInput.style.right = '10%';
         timeInput.style.padding = '10px';
         timeInput.style.fontSize = '16px';
         timeInput.style.border = '1px solid #ccc';
@@ -392,10 +392,10 @@ function handleDeadlineClick() {
         
         // Style the button
         setButton.style.position = 'fixed';
-        setButton.style.top = '385px';
-        setButton.style.left = '25px';
-        setButton.style.width = '55%';
-        setButton.style.height = '50px';
+        setButton.style.bottom = '5%';
+        setButton.style.left = '10%';
+        setButton.style.width = '60%';
+        setButton.style.height = '10%';
         setButton.style.padding = '12px';
         setButton.style.backgroundColor = '#CA9D67';
         setButton.style.color = 'white';
@@ -424,10 +424,10 @@ function handleDeadlineClick() {
         
         // Style the cancel button
         cancelButton.style.position = 'fixed';
-        cancelButton.style.top = '385px';
-        cancelButton.style.right = '25px';
-        cancelButton.style.width = '30%';
-        cancelButton.style.height = '50px';
+        cancelButton.style.bottom = '5%';
+        cancelButton.style.right = '10%';
+        cancelButton.style.width = '20%';
+        cancelButton.style.height = '10%';
         cancelButton.style.padding = '12px';
         cancelButton.style.backgroundColor = '#ff3b30';
         cancelButton.style.color = 'white';

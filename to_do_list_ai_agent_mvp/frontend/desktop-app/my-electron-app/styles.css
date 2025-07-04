@@ -30,28 +30,22 @@ body {
     color: #CA9D67;
 }
 
-button:hover {
-    transform: scale(1.05); /* Slightly bigger on hover */
-    
-}
-
-button:active {
-    transform: scale(0.95); /* Slightly smaller when pressed */
-}
 
 /* home screen */
+
 .ai-message-container {
     background-color: #FDECC0;
     border-radius: 16px;
     margin: auto;
     text-align: center;
     /* Fixed position and size */
-    position: sticky;
-    top: 20%;
-    left: 20px;
-    right: 20px;
+    position: fixed;
+    left: 50%; /* Center horizontally */
+    top: 30%; /* Center vertically */
+    transform: translate(-50%, -50%); /* Offset by half width/height */
     z-index: 1;
-    height: 120px; /* Fixed height */
+    height: 25%; /* Fixed height */
+    width: 80%; /* Fixed width */
     
     /* Flexbox for centering text */
     display: flex;
@@ -73,19 +67,26 @@ button:active {
     text-align: center;
 }
 
-.image-container{
-    position: relative;
+.image-container {
+    position: fixed;
     z-index: 2;
-    top: 40px;
+    top: 1%; /* Move potato higher */
+    bottom: 99%; /* Ensure it doesn't stick to the bottom */
+    left: 50%;
+    transform: translateX(-50%); /* Center the potato */
     margin: auto;
-    text-align: center;
-    font-size: 36px;
+}
+
+#potatoImage {
+    width: 220px;
+    height: 140px;
 }
 
 #add-button {
     position: fixed;
-    left: 25%;
-    top: 385px;
+    left: 50%; /* Center horizontally */
+    top: 90%; /* Center vertically */
+    transform: translate(-50%, -50%); /* Offset by half width/height */
     background-color: #CA9D67;
     border-radius: 16px;
     width: 160px;
@@ -96,25 +97,25 @@ button:active {
     cursor: pointer;
     font-family: Fredoka; 
     font-weight: 500;
-    font-size: 16px;
     text-align: center;
-    transition: all 0.3s ease; /* Duration and timing */
+    transition: all 0.3s ease;
 }
+
 
 /* add/edit task screen */
 .task-input-container {
-    padding:20px;
-    background-color: #FDECC0;
+   background-color: #FDECC0;
     border-radius: 16px;
     margin: auto;
     text-align: center;
-       /* Fixed position and size */
-    position: absolute;
-    top: 60px;
-    left: 25px;
-    right: 25px;
+    /* Fixed position and size */
+    position: fixed;
+    left: 50%; /* Center horizontally */
+    top: 28%; /* Center vertically */
+    transform: translate(-50%, -50%); /* Offset by half width/height */
     z-index: 1;
-    height: 180px; /* Fixed height */
+    height: 35%; /* Fixed height */
+    width: 80%; /* Fixed width */
     
     /* Flexbox for centering text */
     display: flex;
@@ -122,8 +123,10 @@ button:active {
     justify-content: center;
     padding: 0 15px;
     box-sizing: border-box;
-    transition: all 0.1s ease;
-    cursor: text;
+    
+    /* FIXES from search results for sticky in flexbox */
+    align-self: flex-start; /* Key fix from search results */
+    flex-shrink: 0; /* Prevent shrinking */
 }
 
 .task-input-container:focus-within{
@@ -158,11 +161,11 @@ button:active {
 
 
 .ddl-button{
-    position: absolute;
+    position: fixed;
     padding-left:10px;
-    top:250px;
-    left: 25px;
-    right: 25px;
+    top:50%;
+    left: 10%;
+    right: 10%;
     height: 40px;
     background-color: transparent;
     border: none;
@@ -195,22 +198,22 @@ button:active {
 }
 
 .reminder-button{
-    border: none;
-    position: absolute;
-    left: 25px;
-    right: 25px;
-    top:300px;
-    height: 40px;
+    position: fixed;
     padding-left:10px;
+    top:60%;
+    left: 10%;
+    right: 10%;
+    height: 40px;
     background-color: transparent;
+    border: none;
     font-family: Fredoka;
     font-size: 16px;
     cursor: pointer;
-    transition: all 0.1s ease;
     display: flex;
     align-items: center; /* Vertically centers icon and text */
     justify-content: flex-start; /* Left-aligns the content as a group */
     gap: 15px; /* Adds space between icon and text */
+    transition: all 0.1s ease;
 }
 
 .reminder-button:hover{
@@ -232,12 +235,13 @@ button:active {
 }
 
 .finish-edit {
-    position: fixed;
-    left: 25px;
-    top: 385px;
+     position: fixed;
+    left: 40%; /* Center horizontally */
+    top: 90%; /* Center vertically */
+    transform: translate(-50%, -50%); /* Offset by half width/height */
     background-color: #CA9D67;
     border-radius: 16px;
-    width: 220px;
+    width: 60%;
     height: 50px;
     border: none;
     font-size: 16px;
@@ -245,15 +249,15 @@ button:active {
     cursor: pointer;
     font-family: Fredoka; 
     font-weight: 500;
-    font-size: 16px;
     text-align: center;
     transition: all 0.3s ease;
 }
 
 .finish-add {
     position: fixed;
-    left: 25%;
-    top: 385px;
+    left: 50%; /* Center horizontally */
+    top: 90%; /* Center vertically */
+    transform: translate(-50%, -50%); /* Offset by half width/height */
     background-color: #CA9D67;
     border-radius: 16px;
     width: 160px;
@@ -264,20 +268,20 @@ button:active {
     cursor: pointer;
     font-family: Fredoka; 
     font-weight: 500;
-    font-size: 16px;
     text-align: center;
     transition: all 0.3s ease;
 }
 .delete-button {
     position: fixed;
-    right: 25px;
-    top: 385px;
-    background-color: #CA9D67;
+    right: 10%;
+    bottom: 5.5%;
+    background-color: rgba(230, 30, 30, 0.954);
     border-radius: 16px;
-    width: 50px;
+    width: 15%;
     height: 50px;
     border: none;
-    font-size: 10px;
+    font-size: 12px;
+    font-weight: 500;
     color: white;
     cursor: pointer;
     font-family: Fredoka;
@@ -304,9 +308,13 @@ button:active {
 
 /* Task display styles */
 .task-list {
+    position: fixed;
+    top: 40%;
+    left:10%;
+    right:10%;
     margin: 35px 0px;
     padding: 0;
-    max-height: 220px; /* Adjust this value */
+    max-height: 40%; /* Adjust this value */
     overflow-y: auto;
 }
 
@@ -315,6 +323,7 @@ button:active {
 }
 
 .task-item {
+    width: 100%;
     display: flex;
     align-items: center;
     padding: 5px 0;
@@ -334,6 +343,7 @@ button:active {
     width: 18px;
     height: 18px;
     border:2px solid #CA9D67;
+    cursor: pointer;
 }
 
 .task-name {
@@ -349,6 +359,7 @@ button:active {
 }
 
 .three-dots-menu {
+    position: relative;
     background: none;
     border: none;
     font-size: 22px;

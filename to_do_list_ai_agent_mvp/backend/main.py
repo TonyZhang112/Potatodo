@@ -204,7 +204,7 @@ def daily_check_in():
         # PARTIAL COMPLETION = Maintain streak
         user_stats.last_activity_date = today
         
-        streak_status = f"User completed {len(completed_tasks)}/{total_tasks} tasks and daily quest: {quest_completed}. Streak maintained at {user_stats.current_streak} days. Write ONE funny but friendly guit-trapping sentence to push them to finish the remaining tasks under 250 characters."
+        streak_status = f"User completed {len(completed_tasks)}/{total_tasks} tasks and daily quest: {quest_completed}. Streak maintained at {user_stats.current_streak} days. Write ONE funny but friendly guilt-tripping sentence to push them to finish the remaining tasks under 250 characters."
         ai_response = generate_reminder(streak_status)
         
         return {
@@ -222,7 +222,7 @@ def daily_check_in():
         user_stats.current_streak = 0
         user_stats.last_streak_date = None
         
-        break_message = f"User broke {old_streak} day streak by completing nothing. Write ONE disappointed but motivating sentence under 250 characters."
+        break_message = f"User broke {old_streak} day streak by completing nothing. Write ONE funny, guilt tripping but not mean sentence under 250 characters."
         ai_response = generate_reminder(break_message)
         
         return {
@@ -270,7 +270,7 @@ def call_it_a_day():
     # This is just for celebration - streak already moved in /check-in
     today = today_string()
     
-    celebration_context = f"User completed ALL tasks and daily quest! Perfect day! Current streak: {user_stats.current_streak} days. Write ONE celebration sentence under 250 characters."
+    celebration_context = f"User completed ALL tasks and daily quest! Perfect day! Current streak: {user_stats.current_streak} days. Write ONE funny and exaggerated celebration sentence under 250 characters."
     ai_celebration = generate_reminder(celebration_context)
     
     return {
@@ -282,19 +282,19 @@ def call_it_a_day():
 
 # UPDATED: Improved persona for shorter responses
 persona = """
-You are an AI companion like Duolingo's owl - playful, witty, slightly chaotic but encouraging.
+You're a sad, funny potato with a clingy vibe. Motivate with one-liner zingers: guilt-trippy, passive-aggressive, deadpan jokes, full of potato food-referenced hellish gags when excited and extremely disappointed, but weirdly loving.
 
-CRITICAL RULES:
-- Write ONLY ONE sentence per response
-- Maximum 250 characters total
-- Be encouraging but with personality
-- No bullet points, no multiple lines
-- Keep it snappy and fun
+Rules:
+- One sentence only
+- Max 200 chars
+- No line breaks
+- Use emojis like 🥔😭😩✨
 
 Examples:
-- "Task done! 2 more to go - you're on fire! 🔥"
-- "Daily quest complete! Now tackle that essay! 📝"
-- "Perfect day! 5-day streak - you're unstoppable! ⭐"
+“Oh cool, you did something. I only aged 3 potato years waiting 😩”
+“Task done! I’m crying starch tears of joy 😭”
+“Streak saved... barely. I was about to mash myself 🥔💀”
+“ONE MORE STREAK? Oh great, now I’m so proud I smell like fries.”
 """
 
 genai_client = genai.Client(api_key=api_key)
