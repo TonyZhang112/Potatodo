@@ -41,10 +41,10 @@ body {
     /* Fixed position and size */
     position: fixed;
     left: 50%; /* Center horizontally */
-    top: 30%; /* Center vertically */
+    top: 28%; /* Center vertically */
     transform: translate(-50%, -50%); /* Offset by half width/height */
     z-index: 1;
-    height: 25%; /* Fixed height */
+    height: 20%; /* Fixed height */
     width: 80%; /* Fixed width */
     
     /* Flexbox for centering text */
@@ -59,6 +59,20 @@ body {
     flex-shrink: 0; /* Prevent shrinking */
 }
 
+.streak {
+    position: fixed;
+    top: 1%;
+    left: 5%;
+    font-family: Fredoka; 
+    font-weight: 600;
+    font-size: 16px;
+    color: #CA9D67;
+}
+
+#streak-icon {
+    width: 50px; /* Adjust size as needed */
+    height: 50px; /* Adjust size as needed */
+}
 
 #ai-message {
     font-family: Fredoka; 
@@ -70,7 +84,7 @@ body {
 .image-container {
     position: fixed;
     z-index: 2;
-    top: 0%; /* Move potato higher */
+    top: 3%; /* Move potato higher */
     bottom: 99%; /* Ensure it doesn't stick to the bottom */
     left: 50%;
     transform: translateX(-50%); /* Center the potato */
@@ -78,28 +92,77 @@ body {
 }
 
 #potato-default {
-    width: 220px;
-    height: 140px;
+    width: 200px;
+    height: 120px;
     /*display: none; */
 }
 
 #potato-task-complete {
+    width: 200px;
+    height: 120px;
+    display:none; /* Hide by default */
+}
+
+#potato-no-task-complete {
     width: 220px;
     height: 140px;
     display:none; /* Hide by default */
 }
 
-#potato-no-task-complete {
-    width: 240px;
-    height: 160px;
-    display:none; /* Hide by default */
+#potato-task-clear {
+    width: 200px;
+    height: 130px;
+   display:none; /* Hide by default */
 }
 
-#potato-task-clear {
-    width: 230px;
-    height: 150px;
-    display:none; /* Hide by default */
+.daily-task {
+    position: fixed;
+    left: 50%;
+    top: 40%;
+    transform: translateX(-50%);
+    width: 80%;
+    height: 5%;
+    background-color: #CA9D67;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
+
+.daily-task:hover {
+    outline: 4px solid #836642;
+}
+
+.daily-task:focus-within {
+    outline: 4px solid #836642; /* Highlight border when focused */
+}
+
+#daily-input {
+    position: fixed;
+    left: 10%;
+    width: 90%;
+    height: 100%;
+    border: none;
+    border-radius: 16px;
+    padding: 10px;
+    font-family: Fredoka; 
+    font-weight: 600;
+    font-size: 16px;
+    color: white;
+    background-color: transparent;
+    outline: none;
+}
+
+#daily-checkbox {
+    position: fixed;
+    left: 3%;
+    margin-right: 5px;
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+}
+
+
 #add-button {
     position: fixed;
     left: 50%; /* Center horizontally */

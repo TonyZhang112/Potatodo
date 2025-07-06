@@ -1,3 +1,111 @@
+// === API CONNECTION FUNCTIONS ===
+
+const API_BASE_URL = 'http://localhost:8000'; // Your FastAPI server URL
+
+// Test connection to backend
+async function testBackendConnection() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/health`);
+        if (response.ok) {
+            console.log('✅ Backend connection successful');
+            return true;
+        }
+    } catch (error) {
+        console.error('❌ Backend connection failed:', error);
+        return false;
+    }
+}
+
+// Get tasks from backend instead of localStorage
+async function getTasksFromBackend() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/tasks`);
+        if (response.ok) {
+            const tasks = await response.json();
+            console.log('Tasks loaded from backend:', tasks);
+            return tasks;
+        }
+    } catch (error) {
+        console.error('Error fetching tasks:', error);
+        return []; // Return empty array on error
+    }
+}
+
+// Create new task on backend
+async function createTaskOnBackend(taskData) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/tasks`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(taskData)
+        });
+        
+        if (response.ok) {
+            const newTask = await response.json();
+            console.log('Task created on backend:', newTask);
+            return newTask;
+        }
+    } catch (error) {
+        console.error('Error creating task:', error);
+        return null;
+    }
+}
+
+// Complete task on backend and get AI response
+async function completeTaskOnBackend(taskId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/tasks/${taskId}/complete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            console.log('Task completed on backend:', result);
+            
+            // Update AI message if provided
+            if (result.ai_message) {
+                document.getElementById('ai-message').textContent = result.ai_message;
+            }
+            
+            // Update potato emotion if provided
+            if (result.potato_emotion) {
+                updatePotatoEmotion(result.potato_emotion);
+            }
+            
+            // Update streak display if provided
+            if (result.current_streak !== undefined) {
+                updateStreakFromBackend(result.current_streak);
+            }
+            
+            return result;
+        }
+    } catch (error) {
+        console.error('Error completing task:', error);
+        return null;
+    }
+}
+
+// Get current streak from backend
+async function getStreakFromBackend() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/streak`);
+        if (response.ok) {
+            const streakData = await response.json();
+            console.log('Streak data from backend:', streakData);
+            return streakData;
+        }
+    } catch (error) {
+        console.error('Error fetching streak:', error);
+        return { count: 0, message: "Start your journey!" };
+    }
+}
+
+
 // Wait for the page to fully load before running our JavaScript
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Page loaded, setting up navigation...');

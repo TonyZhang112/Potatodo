@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from fastapi import HTTPException, Path
 import datetime
@@ -11,6 +12,15 @@ import os
 load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
 app = FastAPI()
+
+# Add CORS middleware for Electron app
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, specify your Electron app's origin
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class Task(BaseModel):
     description: str
