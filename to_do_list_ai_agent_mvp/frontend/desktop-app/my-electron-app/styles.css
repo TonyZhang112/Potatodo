@@ -70,18 +70,36 @@ body {
 .image-container {
     position: fixed;
     z-index: 2;
-    top: 1%; /* Move potato higher */
+    top: 0%; /* Move potato higher */
     bottom: 99%; /* Ensure it doesn't stick to the bottom */
     left: 50%;
     transform: translateX(-50%); /* Center the potato */
     margin: auto;
 }
 
-#potatoImage {
+#potato-default {
     width: 220px;
     height: 140px;
+    /*display: none; */
 }
 
+#potato-task-complete {
+    width: 220px;
+    height: 140px;
+    display:none; /* Hide by default */
+}
+
+#potato-no-task-complete {
+    width: 240px;
+    height: 160px;
+    display:none; /* Hide by default */
+}
+
+#potato-task-clear {
+    width: 230px;
+    height: 150px;
+    display:none; /* Hide by default */
+}
 #add-button {
     position: fixed;
     left: 50%; /* Center horizontally */
