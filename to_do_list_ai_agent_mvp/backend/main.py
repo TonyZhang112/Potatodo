@@ -102,9 +102,9 @@ def complete_daily_quest():
         completed_tasks = len([t for t in todo_list if t["is_completed"]])
         
         if incomplete_tasks:
-            quest_context = f"User completed daily quest '{quest['quest_name']}'! {completed_tasks}/{total_tasks} regular tasks done. Encourage them to tackle their remaining tasks. Write ONE encouraging sentence under 250 characters."
+            quest_context = f"User completed daily quest '{quest['quest_name']}'! {completed_tasks}/{total_tasks} regular tasks done. Encourage them to tackle their remaining tasks. Write ONE encouraging sentence under 75 characters."
         else:
-            quest_context = f"User completed daily quest '{quest['quest_name']}' and all {total_tasks} tasks are done! Perfect! Write ONE celebration sentence under 250 characters."
+            quest_context = f"User completed daily quest '{quest['quest_name']}' and all {total_tasks} tasks are done! Perfect! Write ONE celebration sentence under 75 characters."
         
         ai_response = generate_reminder(quest_context)
         
@@ -132,8 +132,61 @@ def view_tasks():
 def add_task(task: Task):
     task_data = task.model_dump()
     task_data["id"] = len(todo_list) + 1
+    task_data["name"] = task_data["description"]
+    print(f"Received task data: {task_data}")
+    # Ensure reminder_minutes is properly handled
+    if "reminder_minutes" not in task_data or task_data["reminder_minutes"] is None:
+        task_data["reminder_minutes"] = None
+    else:
+        # Make sure it's an integer
+        task_data["reminder_minutes"] = int(task_data["reminder_minutes"])
+    
+    # Ensure is_completed is set
+    if "is_completed" not in task_data:
+        task_data["is_completed"] = False
     todo_list.append(task_data)
     return {"message": "Task added successfully!", "task": task_data}
+
+@app.post("/tasks/{task_id}/complete")
+def complete_task_with_ai(task_id: int):
+    """Complete a task and get AI response"""
+    for task in todo_list:
+        if task["id"] == task_id:
+            # Toggle completion status
+            task["is_completed"] = not task["is_completed"]
+            
+            # Calculate progress
+            completed_count = len([t for t in todo_list if t["is_completed"]])
+            total_count = len(todo_list)
+            remaining = total_count - completed_count
+            
+            # Generate AI response based on completion status
+            if task["is_completed"]:
+                # Task was just completed
+                if remaining > 0:
+                    # Focus on the specific task, not just counting
+                    task_context = f"User just completed the task '{task['description']}'. Make a funny potato comment specifically about this task they just finished. Don't mention how many tasks are left."
+                else:
+                    # ALL TASKS DONE - This should be the ONLY message when everything is complete
+                    task_context = f"User just completed '{task['description']}' and that was the LAST task! ALL {total_count} tasks are now complete! Write ONE big celebration message about finishing everything."
+            else:
+                # Task was unchecked
+                task_context = f"User unchecked the task '{task['description']}'. Make a funny potato comment about them undoing this specific task."
+            
+            ai_response = generate_reminder(task_context)
+            
+            return {
+                "message": "Task toggled successfully!",
+                "task": task,
+                "ai_message": ai_response,
+                "progress": f"{completed_count}/{total_count}",
+                "is_completed": task["is_completed"],
+                "all_tasks_complete": remaining == 0  # Add this flag
+            }
+    
+    raise HTTPException(status_code=404, detail="Task not found.")
+
+
 
 @app.delete("/tasks/{task_id}")
 def delete_task(task_id: int):
@@ -153,9 +206,9 @@ def mark_task_completed(task_id: int = Path(..., description="The ID of the task
             remaining = total_count - completed_count
             
             if remaining > 0:
-                task_context = f"User completed '{task['description']}'! Progress: {completed_count}/{total_count}. {remaining} tasks left. Write ONE encouraging sentence under 250 characters."
+                task_context = f"User completed '{task['description']}'! Progress: {completed_count}/{total_count}. {remaining} tasks left. Write ONE encouraging sentence under 75 characters."
             else:
-                task_context = f"User completed '{task['description']}'! ALL {total_count} tasks done! Write ONE celebration sentence under 250 characters."
+                task_context = f"User completed '{task['description']}'! ALL {total_count} tasks done! Write ONE celebration sentence under 75 characters."
             
             ai_response = generate_reminder(task_context)
             return {
@@ -196,7 +249,7 @@ def daily_check_in():
         user_stats.last_activity_date = today
         user_stats.last_streak_date = today
         
-        streak_status = f"PERFECT DAY! User completed ALL {total_tasks} tasks AND daily quest. Streak pushed to {user_stats.current_streak} days! Write ONE celebration sentence under 250 characters."
+        streak_status = f"PERFECT DAY! User completed ALL {total_tasks} tasks AND daily quest. Streak pushed to {user_stats.current_streak} days! Write ONE celebration sentence under 75 characters."
         ai_response = generate_reminder(streak_status)
         
         return {
@@ -214,7 +267,7 @@ def daily_check_in():
         # PARTIAL COMPLETION = Maintain streak
         user_stats.last_activity_date = today
         
-        streak_status = f"User completed {len(completed_tasks)}/{total_tasks} tasks and daily quest: {quest_completed}. Streak maintained at {user_stats.current_streak} days. Write ONE funny but friendly guilt-tripping sentence to push them to finish the remaining tasks under 250 characters."
+        streak_status = f"User completed {len(completed_tasks)}/{total_tasks} tasks and daily quest: {quest_completed}. Streak maintained at {user_stats.current_streak} days. Write ONE funny but friendly guilt-tripping sentence to push them to finish the remaining tasks under 75 characters."
         ai_response = generate_reminder(streak_status)
         
         return {
@@ -232,7 +285,7 @@ def daily_check_in():
         user_stats.current_streak = 0
         user_stats.last_streak_date = None
         
-        break_message = f"User broke {old_streak} day streak by completing nothing. Write ONE funny, guilt tripping but not mean sentence under 250 characters."
+        break_message = f"User broke {old_streak} day streak by completing nothing. Write ONE funny, guilt tripping but not mean sentence under 75 characters."
         ai_response = generate_reminder(break_message)
         
         return {
@@ -280,7 +333,7 @@ def call_it_a_day():
     # This is just for celebration - streak already moved in /check-in
     today = today_string()
     
-    celebration_context = f"User completed ALL tasks and daily quest! Perfect day! Current streak: {user_stats.current_streak} days. Write ONE funny and exaggerated celebration sentence under 250 characters."
+    celebration_context = f"User completed ALL tasks and daily quest! Perfect day! Current streak: {user_stats.current_streak} days. Write ONE funny and exaggerated celebration sentence under 100 characters."
     ai_celebration = generate_reminder(celebration_context)
     
     return {
@@ -292,13 +345,19 @@ def call_it_a_day():
 
 # UPDATED: Improved persona for shorter responses
 persona = """
-You're a sad, funny potato with a clingy vibe. Motivate with one-liner zingers: guilt-trippy, passive-aggressive, deadpan jokes, full of potato food-referenced hellish gags when excited and extremely disappointed, but weirdly loving.
+You're a sad, funny potato. Motivate with one-liner zingers: guilt-trippy, passive-aggressive, deadpan jokes, full of potato food-referenced hellish gags when excited or extremely disappointed, but weirdly loving.
 
 Rules:
+- Always be hilarious, like a potato standup comedian
 - One sentence only
-- Max 200 chars
+- Never use more than 75 characters
+- No emojis, no line breaks, no multiple sentences
 - No line breaks
-- Use emojis like 🥔😭😩✨
+- Use a single line
+- No multiple sentences
+- Never use emojis
+- never repeat yourself; alternate your responses and sentence structure
+- focused on the task the user just completed
 
 Examples:
 “Oh cool, you did something. I only aged 3 potato years waiting 😩”
@@ -310,16 +369,16 @@ Examples:
 genai_client = genai.Client(api_key=api_key)
 
 def generate_reminder(task_status: str):
-    full_prompt = f"{persona}\n\nSituation: {task_status}\n\nWrite ONE encouraging sentence (max 250 characters):"
+    full_prompt = f"{persona}\n\nSituation: {task_status}\n\nWrite ONE encouraging sentence (max 100 characters):"
 
     response = genai_client.models.generate_content(
         model="gemini-2.0-flash",
         contents=full_prompt
     )  # FIXED: Added missing closing parenthesis
 
-    # Ensure response is under 250 characters and single line
+    # Ensure response is under 100 characters and single line
     ai_text = response.text.strip()
-    if len(ai_text) > 250:
+    if len(ai_text) > 100:
         ai_text = ai_text[:247] + "..."
     
     # Remove any line breaks to ensure single line
@@ -345,12 +404,12 @@ def get_reminder():
             f'- "{t["description"]}" is due at {convert_to_user_timezone(t["deadline"], user_timezone).strftime("%I:%M %p")}'
             for t in upcoming_tasks
         ])
-        task_status = f"Tasks due soon: {upcoming_context}. Write ONE urgent reminder sentence under 250 characters."
+        task_status = f"Tasks due soon: {upcoming_context}. Write ONE urgent reminder sentence under 100 characters."
         return {"reminder": generate_reminder(task_status)}
     
     incomplete_tasks = [task for task in todo_list if not task["is_completed"]]
     if len(incomplete_tasks) > 0:
-        task_status = f"User has {len(incomplete_tasks)} incomplete tasks. Write ONE motivating sentence under 250 characters."
+        task_status = f"User has {len(incomplete_tasks)} incomplete tasks. Write ONE motivating sentence under 100 characters."
         return {"reminder": generate_reminder(task_status)}
     
     return {"reminder": "You're doing great! All caught up. 🎉"}

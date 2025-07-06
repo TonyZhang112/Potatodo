@@ -90,6 +90,13 @@ async function completeTaskOnBackend(taskId) {
     }
 }
 
+// Add this function to your script.js
+function saveTasks(tasks) {
+    localStorage.setItem('potatodo-tasks', JSON.stringify(tasks));
+    console.log('Tasks saved to localStorage:', tasks);
+}
+
+
 // Get current streak from backend
 async function getStreakFromBackend() {
     try {
@@ -107,7 +114,7 @@ async function getStreakFromBackend() {
 
 
 // Wait for the page to fully load before running our JavaScript
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     console.log('Page loaded, setting up navigation...');
     
     // Get the current page's filename
@@ -126,55 +133,124 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 // Function to get all tasks
-// Task storage system - PERSISTENT VERSION using localStorage
-function getTasks() {
-    const stored = localStorage.getItem('potatodo-tasks');
-    return stored ? JSON.parse(stored) : [];
-}
-
-function addTask(taskData) {
-    const tasks = getTasks(); // Get current tasks from localStorage
-    const newTask = {
-        id: Date.now(),
-        name: taskData.name,
-        completed: false,
-        hasReminder: taskData.hasReminder || false,
-        deadline: taskData.deadline || null,
-        reminderMinutes: taskData.reminderMinutes || null
-    };
-    
-    tasks.push(newTask);
-    localStorage.setItem('potatodo-tasks', JSON.stringify(tasks)); // Save to localStorage
-    return newTask;
-}
-
-function saveTasks(tasks) {
-    localStorage.setItem('potatodo-tasks', JSON.stringify(tasks));
-}
-
-// Function to toggle task completion status
-// Function to toggle task completion and auto-reorder
-function toggleTask(taskId) {
-    console.log('Toggling task:', taskId);
-    
-    const tasks = getTasks(); // Get from localStorage
-    const task = tasks.find(t => t.id === taskId);
-    
-    if (task) {
-        // Toggle the completed status
-        task.completed = !task.completed;
+// Replace your current getTasks function with this fixed version
+async function getTasks() {
+    try {
+        const tasks = await getTasksFromBackend();
+        console.log('Tasks loaded from backend:', tasks);
         
-        // Auto-reorder: Move completed tasks to bottom
-        const reorderedTasks = reorderTasksByCompletion(tasks);
-        saveTasks(reorderedTasks); // Save reordered tasks
+        // Make sure we always return an array
+        if (Array.isArray(tasks)) {
+            return tasks;
+        } else {
+            console.warn('Backend returned non-array, using empty array');
+            return [];
+        }
+    } catch (error) {
+        console.error('Failed to get tasks from backend:', error);
+        // Fallback to localStorage if backend fails
+        const stored = localStorage.getItem('potatodo-tasks');
+        const localTasks = stored ? JSON.parse(stored) : [];
         
-        console.log('Task', taskId, 'is now', task.completed ? 'completed' : 'incomplete');
-        
-        // Update the display with reordered tasks
-        const currentTasks = getTasks();
-        showTaskList(currentTasks);
+        // Double-check localStorage data is an array too
+        return Array.isArray(localTasks) ? localTasks : [];
     }
 }
+
+
+//addTask function
+// Replace the localStorage addTask with this backend version
+async function addTask(taskData) {
+    try {
+        const backendTask = {
+            description: taskData.name,
+            deadline: taskData.deadline,
+            reminder_minutes: taskData.reminderMinutes
+        };
+        
+        const newTask = await createTaskOnBackend(backendTask);
+        if (newTask) {
+            // Convert backend format to frontend format
+            return {
+                id: newTask.id,
+                name: newTask.description,
+                completed: newTask.is_completed,
+                deadline: newTask.deadline,
+                reminderMinutes: newTask.reminder_minutes,
+                hasReminder: newTask.reminder_minutes ? true : false
+            };
+        }
+    } catch (error) {
+        console.error('Failed to create task on backend:', error);
+        // Fallback to localStorage
+        const tasks = JSON.parse(localStorage.getItem('potatodo-tasks') || '[]');
+        const newTask = {
+            id: Date.now(),
+            name: taskData.name,
+            completed: false,
+            hasReminder: taskData.hasReminder || false,
+            deadline: taskData.deadline || null,
+            reminderMinutes: taskData.reminderMinutes || null
+        };
+        tasks.push(newTask);
+        localStorage.setItem('potatodo-tasks', JSON.stringify(tasks));
+        return newTask;
+    }
+}
+
+
+async function toggleTask(taskId) {
+    console.log('Toggling task:', taskId);
+    
+    try {
+        // Try to complete task on backend first
+        const result = await completeTaskOnBackend(taskId);
+        
+        if (result && result.ai_message) {
+            // Update AI message from backend
+            const aiMessageElement = document.getElementById('ai-message');
+            if (aiMessageElement) {
+                aiMessageElement.textContent = result.ai_message;
+                console.log('AI response:', result.ai_message);
+            }
+        }
+        
+        // ALWAYS update the display, even when all tasks are complete
+        // Get fresh tasks from backend and reorder them
+        const currentTasks = await getTasks();
+        const reorderedTasks = reorderTasksByCompletion(currentTasks);
+        
+        // Save reordered tasks back to localStorage (as fallback)
+        saveTasks(reorderedTasks);
+        
+        // Update the display with reordered tasks
+        showTaskList(reorderedTasks);
+        
+        // If all tasks are complete, we can add special handling here if needed
+        if (result && result.all_tasks_complete) {
+            console.log('All tasks complete! Display updated with celebration message.');
+            // Any additional celebration logic can go here
+        }
+        
+    } catch (error) {
+        console.error('Backend toggle failed, using localStorage:', error);
+        
+        // Your existing fallback code stays the same...
+        const tasks = await getTasks();
+        const task = tasks.find(t => t.id === taskId);
+        
+        if (task) {
+            task.completed = !task.completed;
+            task.is_completed = task.completed;
+            const reorderedTasks = reorderTasksByCompletion(tasks);
+            saveTasks(reorderedTasks);
+            console.log('Task', taskId, 'is now', task.completed ? 'completed' : 'incomplete');
+            showTaskList(reorderedTasks);
+        }
+    }
+}
+
+
 
 // Function to reorder tasks: incomplete tasks first, completed tasks at bottom
 function reorderTasksByCompletion(tasks) {
@@ -187,11 +263,11 @@ function reorderTasksByCompletion(tasks) {
 }
 
 // Function to handle edit task - passes task data to edit screen
-function editTask(taskId) {
+async function editTask(taskId) {
     console.log('Edit task clicked for:', taskId);
     
     // Get the specific task data
-    const tasks = getTasks();
+    const tasks = await getTasks();
     const task = tasks.find(t => t.id === taskId);
     
     if (task) {
@@ -207,27 +283,9 @@ function editTask(taskId) {
     }
 }
 
-
-function addTask(taskData) {
-    const tasks = getTasks(); // Get current tasks from localStorage
-    const newTask = {
-        id: Date.now(),
-        name: taskData.name,
-        completed: false,
-        hasReminder: taskData.hasReminder || false,
-        deadline: taskData.deadline || null,
-        reminderMinutes: taskData.reminderMinutes || null
-    };
-    
-    tasks.push(newTask);
-    localStorage.setItem('potatodo-tasks', JSON.stringify(tasks)); // Save to localStorage
-    return newTask;
-}
-
-
 // Function to update the home screen display
-function updateHomeDisplay() {
-    const currentTasks = getTasks();
+async function updateHomeDisplay() {
+    const currentTasks = await getTasks();
     
     if (currentTasks.length === 0) {
         showEmptyState();
@@ -260,6 +318,12 @@ function showEmptyState() {
 
 // Function to show task list (when tasks exist) - WITH COMPLETION SUPPORT
 function showTaskList(tasks) {
+    // Add safety check at the beginning
+    if (!Array.isArray(tasks)) {
+        console.error('showTaskList received non-array:', tasks);
+        tasks = []; // Default to empty array
+    }
+    
     // Hide the "Add your first task" button
     const addButton = document.getElementById('add-button');
     if (addButton) {
@@ -275,16 +339,17 @@ function showTaskList(tasks) {
         tasks.forEach(task => {
             // Create task item element with completion state
             const taskItem = document.createElement('div');
-            taskItem.className = `task-item ${task.completed ? 'completed' : ''}`;
+            // Fix: Check both completed and is_completed
+            const isCompleted = task.completed || task.is_completed;
+            taskItem.className = `task-item ${isCompleted ? 'completed' : ''}`;
             
-            // Build the task content with reminder and deadline indicators
+            // Build the task content with proper checkbox state
             let taskContent = `
-                <input type="checkbox" class="task-checkbox" data-task-id="${task.id}" ${task.completed ? 'checked' : ''}>
-                <span class="task-name">${task.name}</span>
+                <input type="checkbox" class="task-checkbox" data-task-id="${task.id}" ${isCompleted ? 'checked' : ''}>
+                <span class="task-name">${task.description || task.name}</span>
             `;
-            
             // Add bell icon if task has reminder
-            if (task.reminderMinutes) {
+            if (task.reminderMinutes || task.reminder_minutes) {
                 taskContent += `<span class="reminder-indicator">🔔</span>`;
             }
             
@@ -336,11 +401,11 @@ function showTaskList(tasks) {
 
 
 // Function to handle the home page (index.html) - COMPLETE VERSION
-function setupHomePage() {
+async function setupHomePage() {
     console.log('Setting up home page...');
     
     // Check if we have tasks
-    const currentTasks = getTasks();
+    const currentTasks = await getTasks();
     
     if (currentTasks.length === 0) {
         // Show empty state and ensure button works
@@ -364,7 +429,7 @@ function setupHomePage() {
 }
     
 // Function to handle the add task page - WITH NAVIGATION RESTORED
-function setupAddTaskPage() {
+async function setupAddTaskPage() {
     console.log('Setting up add task page...');
     
     // Handle back button
@@ -400,7 +465,7 @@ function setupAddTaskPage() {
     const addTaskButton = document.querySelector('.finish-add');
     if (addTaskButton) {
         console.log('Add task button found');
-        addTaskButton.addEventListener('click', function(e) {
+        addTaskButton.addEventListener('click', async function(e) {
             e.preventDefault();
             console.log('Add task button clicked');
             
@@ -421,7 +486,7 @@ function setupAddTaskPage() {
                 
                 console.log('Creating task with deadline:', window.currentDeadline);
                 
-                addTask(newTask);
+                await addTask(newTask);
                 console.log('Task added successfully:', newTask);
                 console.log('All tasks now:', getTasks());
                 
