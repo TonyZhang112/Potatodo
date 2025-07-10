@@ -221,27 +221,26 @@ def mark_task_completed(task_id: int = Path(..., description="The ID of the task
 
 @app.post("/task-progress-check")
 def check_task_progress():
-    """Pure task completion feedback - no streak logic"""
     completed_tasks = [t for t in todo_list if t["is_completed"]]
     total_tasks = len(todo_list)
     
-    # Calculate progress percentage
     progress_checker = len(completed_tasks) / total_tasks if total_tasks > 0 else 0
     
-    # Complete logic with all conditions
+    # DEBUG: Add this to see what's happening
+    print(f"DEBUG: completed={len(completed_tasks)}, total={total_tasks}, progress={progress_checker}")
+    
     if total_tasks == 0:
         ai_prompt = "User has no tasks today. Write ONE funny sentence asking if they want to add a task under 75 characters."
     elif len(completed_tasks) == 0:
-        # SUPER GUILT TRIP - Zero tasks completed
         ai_prompt = "User has tasks but completed ZERO of them. Write ONE super guilt-trippy funny sentence under 75 characters."
     elif len(completed_tasks) == total_tasks:
-        # FULL COMPLETION - All tasks done!
         ai_prompt = "User completed ALL their tasks! Perfect day! Write ONE big celebration sentence under 75 characters."
     elif progress_checker >= 0.5:
         ai_prompt = "User has completed more than half of their tasks. Write ONE celebration sentence under 75 characters."
-    else:  # progress_checker < 0.5
+    else:  # This should catch 33% completion
         ai_prompt = "User has completed less than half of their tasks. Write ONE guilt-trippy sentence to motivate them under 75 characters."
     
+    print(f"DEBUG: Using prompt: {ai_prompt}")
     ai_message = generate_reminder(ai_prompt)
     
     return {
@@ -252,6 +251,7 @@ def check_task_progress():
         "completion_percentage": int(progress_checker * 100),
         "all_complete": len(completed_tasks) == total_tasks and total_tasks > 0
     }
+
 
 @app.post("/check-in")
 def daily_check_in():
