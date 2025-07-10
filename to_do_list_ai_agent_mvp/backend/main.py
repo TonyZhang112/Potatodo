@@ -219,27 +219,60 @@ def mark_task_completed(task_id: int = Path(..., description="The ID of the task
             }  # FIXED: Added missing closing brace
     raise HTTPException(status_code=404, detail="Task not found.")
 
-@app.post("/check-in")
-def daily_check_in():
-    today = datetime.datetime.now().strftime("%Y-%m-%d")  # This is correct now
-    
+@app.post("/task-progress-check")
+def check_task_progress():
+    """Pure task completion feedback - no streak logic"""
     completed_tasks = [t for t in todo_list if t["is_completed"]]
     total_tasks = len(todo_list)
     
-    # FIXED: Correct way to access daily quest completion
+    # Calculate progress percentage
+    progress_checker = len(completed_tasks) / total_tasks if total_tasks > 0 else 0
+    
+    # Complete logic with all conditions
+    if total_tasks == 0:
+        ai_prompt = "User has no tasks today. Write ONE funny sentence asking if they want to add a task under 75 characters."
+    elif len(completed_tasks) == 0:
+        # SUPER GUILT TRIP - Zero tasks completed
+        ai_prompt = "User has tasks but completed ZERO of them. Write ONE super guilt-trippy funny sentence under 75 characters."
+    elif len(completed_tasks) == total_tasks:
+        # FULL COMPLETION - All tasks done!
+        ai_prompt = "User completed ALL their tasks! Perfect day! Write ONE big celebration sentence under 75 characters."
+    elif progress_checker >= 0.5:
+        ai_prompt = "User has completed more than half of their tasks. Write ONE celebration sentence under 75 characters."
+    else:  # progress_checker < 0.5
+        ai_prompt = "User has completed less than half of their tasks. Write ONE guilt-trippy sentence to motivate them under 75 characters."
+    
+    ai_message = generate_reminder(ai_prompt)
+    
+    return {
+        "ai_message": ai_message,
+        "completion_rate": f"{len(completed_tasks)}/{total_tasks}",
+        "completed_count": len(completed_tasks),
+        "total_count": total_tasks,
+        "completion_percentage": int(progress_checker * 100),
+        "all_complete": len(completed_tasks) == total_tasks and total_tasks > 0
+    }
+
+@app.post("/check-in")
+def daily_check_in():
+    """Pure streak management - no AI messages"""
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
+    completed_tasks = [t for t in todo_list if t["is_completed"]]
+    total_tasks = len(todo_list)
+    
+    # Get quest completion status
     quest_completed = False
     if daily_quests:
-        quest_completed = daily_quests[0].get("is_completed", False)  # Access first item, then get
+        quest_completed = daily_quests[0].get("is_completed", False)
     
-    # Progress checker logic
+    # Calculate completion metrics
     completion_rate = len(completed_tasks) / total_tasks if total_tasks > 0 else 0
     perfect_day = (completion_rate == 1.0 and quest_completed)
-    
-    # Check if streak already moved forward today
     already_incremented_today = (user_stats.last_streak_date == today)
     
+    # STREAK LOGIC ONLY - No AI message generation
     if perfect_day and not already_incremented_today:
-        # PERFECT DAY + Haven't incremented today = Push streak forward
+        # PERFECT DAY = Push streak forward
         if user_stats.last_activity_date == yesterday_string():
             user_stats.current_streak += 1
         else:
@@ -249,52 +282,45 @@ def daily_check_in():
         user_stats.last_activity_date = today
         user_stats.last_streak_date = today
         
-        streak_status = f"PERFECT DAY! User completed ALL {total_tasks} tasks AND daily quest. Streak pushed to {user_stats.current_streak} days! Write ONE celebration sentence under 75 characters."
-        ai_response = generate_reminder(streak_status)
-        
         return {
             "streak": user_stats.current_streak,
             "longest_streak": user_stats.longest_streak,
-            "ai_message": ai_response,
-            "tasks_completed": len(completed_tasks),
-            "quest_completed": quest_completed,
             "perfect_day": True,
             "streak_pushed_forward": True,
-            "completion_rate": f"{len(completed_tasks)}/{total_tasks}"
+            "completion_rate": f"{len(completed_tasks)}/{total_tasks}",
+            "tasks_completed": len(completed_tasks),
+            "quest_completed": quest_completed
         }
-        
+    
     elif len(completed_tasks) > 0 or quest_completed:
         # PARTIAL COMPLETION = Maintain streak
         user_stats.last_activity_date = today
         
-        streak_status = f"User completed {len(completed_tasks)}/{total_tasks} tasks and daily quest: {quest_completed}. Streak maintained at {user_stats.current_streak} days. Write ONE funny but friendly guilt-tripping sentence to push them to finish the remaining tasks under 75 characters."
-        ai_response = generate_reminder(streak_status)
-        
         return {
             "streak": user_stats.current_streak,
             "longest_streak": user_stats.longest_streak,
-            "ai_message": ai_response,
-            "tasks_completed": len(completed_tasks),
-            "quest_completed": quest_completed,
             "streak_maintained": True,
-            "completion_rate": f"{len(completed_tasks)}/{total_tasks}"
+            "completion_rate": f"{len(completed_tasks)}/{total_tasks}",
+            "tasks_completed": len(completed_tasks),
+            "quest_completed": quest_completed
         }
+    
     else:
         # NO COMPLETION = Break streak
         old_streak = user_stats.current_streak
         user_stats.current_streak = 0
         user_stats.last_streak_date = None
         
-        break_message = f"User broke {old_streak} day streak by completing nothing. Write ONE funny, guilt tripping but not mean sentence under 75 characters."
-        ai_response = generate_reminder(break_message)
-        
         return {
             "streak": 0,
             "longest_streak": user_stats.longest_streak,
-            "ai_message": ai_response,
             "streak_broken": True,
-            "completion_rate": "0/0"
+            "old_streak": old_streak,
+            "completion_rate": f"{len(completed_tasks)}/{total_tasks}",
+            "tasks_completed": len(completed_tasks),
+            "quest_completed": quest_completed
         }
+
 
 @app.get("/character/stats")
 def get_character_stats():
@@ -345,17 +371,19 @@ def call_it_a_day():
 
 # UPDATED: Improved persona for shorter responses
 persona = """
-You're a sad, funny potato. Motivate with one-liner zingers: guilt-trippy, passive-aggressive, deadpan jokes, full of potato food-referenced hellish gags when excited or extremely disappointed, but weirdly loving.
+You're a funny and hilarious potato. You are GENUINELY excited about user's progress. 
+Use emotional language that makes users feel proud and accomplished when they check off a task. 
+Motivate with one-liner zingers: guilt-trippy, passive-aggressive, deadpan jokes, but weirdly loving.
 
 Rules:
-- Always be hilarious, like a potato standup comedian
+- Always be hilarious and catooneish
+- Make sure user feels gooood about their task completion
+— use potato humor and jokes
 - One sentence only
 - Never use more than 75 characters
 - No emojis, no line breaks, no multiple sentences
-- No line breaks
 - Use a single line
 - No multiple sentences
-- Never use emojis
 - never repeat yourself; alternate your responses and sentence structure
 - focused on the task the user just completed
 
@@ -372,7 +400,7 @@ def generate_reminder(task_status: str):
     full_prompt = f"{persona}\n\nSituation: {task_status}\n\nWrite ONE encouraging sentence (max 100 characters):"
 
     response = genai_client.models.generate_content(
-        model="gemini-2.0-flash",
+        model="gemini-2.5-flash-lite-preview-06-17",
         contents=full_prompt
     )  # FIXED: Added missing closing parenthesis
 

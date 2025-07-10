@@ -30,6 +30,30 @@ body {
     color: #CA9D67;
 }
 
+.image-container .ai-bounce {
+    animation: aiBounce 0.6s ease-in-out;
+}
+
+
+@keyframes aiBounce {
+    0%, 100% {
+        transform:  translateY(0);
+    }
+    25% {
+        transform:  scale(0.7);
+    }
+    50% {
+        transform:  scale(1.1);
+    }
+    75% {
+        transform: scale(0.9);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+
 
 /* home screen */
 
@@ -415,17 +439,88 @@ body {
     opacity: 1;
 }
 
+.task-item:hover {
+    transform: translateY(-2px);
+    transform: scale(1.02);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background-color: #FFF8E1; /* Light yellow background on hover */
+}
+
 .task-item:last-child {
     border-bottom: none;
 }
 
+.task-item.completing .task-name {
+    position: relative;
+    transition: color 0.6s ease-out;
+    color: #888; /* Fade text color during animation */
+}
+
+.task-item.completing .task-name::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    height: 2px;
+    background-color: #CA9D67;
+    animation: strikethrough 0.3s ease-out forwards;
+    z-index: 1;
+}
+
+/* Final completed state - keeps the line visible */
+.task-item.completed .task-name {
+    position: relative;
+    color: #C19A6B; /* Faded text color */
+}
+
+.task-item.completed .task-name::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: #C19A6B; /* Slightly faded line color */
+    z-index: 1;
+}
+
+@keyframes strikethrough {
+    0% {
+        width: 0%;
+        opacity: 0.8;
+    }
+    100% {
+        width: 100%;
+        opacity: 1;
+    }
+}
+
+
+/* Force custom checkbox style to always apply immediately */
 .task-checkbox {
-    margin-right: 15px;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
     width: 18px;
     height: 18px;
-    border:2px solid #CA9D67;
+    border: 2px solid #CA9D67 !important;
+    border-radius: 3px;
+    background-color: transparent !important;
     cursor: pointer;
+    position: relative;
+    margin-right: 15px;
 }
+
+.task-checkbox:checked {
+    background-color: #CA9D67 !important;
+    border-color: #CA9D67 !important;
+}
+
+.task-checkbox:hover {
+    transform: scale(1.1);
+}
+
+
 
 .task-name {
     flex-grow: 1;
@@ -433,6 +528,7 @@ body {
     font-family: Fredoka;
     color: #333;
 }
+
 
 .task-reminder {
     margin-right: 15px;
@@ -483,12 +579,6 @@ body {
 .task-item.completed {
     opacity: 0.6;
     transition: all 0.3s ease, opacity 0.3s ease;
-}
-
-.task-item.completed .task-name {
-    text-decoration: line-through;
-    color: #C19A6B;
-    transition: color 0.3s ease, text-decoration 0.3s ease;
 }
 
 .task-item.completed .task-checkbox {

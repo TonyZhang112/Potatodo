@@ -16,6 +16,11 @@ async function testBackendConnection() {
     }
 }
 
+// === POTATO IMAGE SWITCHING SYSTEM ===
+let currentPotatoState = 'default';
+let potatoRevertTimer = null;  // ← ADD THIS LINE
+
+
 // Get tasks from backend instead of localStorage
 async function getTasksFromBackend() {
     try {
@@ -90,7 +95,6 @@ async function completeTaskOnBackend(taskId) {
     }
 }
 
-// Add this function to your script.js
 function saveTasks(tasks) {
     localStorage.setItem('potatodo-tasks', JSON.stringify(tasks));
     console.log('Tasks saved to localStorage:', tasks);
@@ -131,9 +135,182 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 });
 
+function switchPotatoImage(newState, revertAfterDelay = false) {
+    console.log(`Switching potato to: ${newState}`);
+    
+    // Clear any existing revert timer
+    if (potatoRevertTimer) {
+        clearTimeout(potatoRevertTimer);
+        potatoRevertTimer = null;
+    }
+    
+    const allPotatoes = [
+        'potato-default',
+        'potato-task-complete', 
+        'potato-task-clear',
+        'potato-no-task-complete'
+    ];
+    
+    // Hide only the potatoes we're NOT switching to
+    allPotatoes.forEach(id => {
+        const img = document.getElementById(id);
+        if (img && id !== `potato-${newState}`) {  // Only hide if it's NOT the target
+            img.style.display = 'none';
+            img.classList.remove('bounce-in');
+        }
+    });
+    
+    // Show the target potato with bounce animation
+    const newPotato = document.getElementById(`potato-${newState}`);
+    if (newPotato) {
+        newPotato.style.display = 'block';
+        // Trigger bounce animation
+        setTimeout(() => {
+            newPotato.classList.add('bounce-in');
+        }, 50);
+        
+        currentPotatoState = newState;
+        
+        // Set revert timer if requested
+        if (revertAfterDelay && newState !== 'default') {
+            potatoRevertTimer = setTimeout(() => {
+                switchPotatoImage('default', false);
+            }, 60000); // 1 minute
+        }
+    }
+}
+
+// Function to trigger potato bounce (for AI messages)
+function bouncePotatoForAI() {
+    const currentPotato = document.getElementById(`potato-${currentPotatoState}`);
+    if (currentPotato && currentPotato.style.display !== 'none') {
+        currentPotato.classList.remove('ai-bounce');
+        // Force reflow
+        currentPotato.offsetHeight;
+        currentPotato.classList.add('ai-bounce');
+        
+        // Remove class after animation
+        setTimeout(() => {
+            currentPotato.classList.remove('ai-bounce');
+        }, 600);
+    }
+}
+
+// === SIMPLIFIED CHECK-IN TIMING SYSTEM ===
+
+let checkInTimers = [];
+
+// Function to schedule check-ins
+function scheduleCheckIns() {
+    console.log('Scheduling daily check-ins...');
+    
+    // Clear any existing timers
+    checkInTimers.forEach(timer => clearTimeout(timer));
+    checkInTimers = [];
+    
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    // Schedule 12 PM check-in
+    const midday = new Date(today);
+    midday.setHours(12, 0, 0, 0);
+    
+    // Schedule 9 PM check-in
+    const evening = new Date(today);
+    evening.setHours(21, 0, 0, 0);
+    
+    // If current time is past these times today, schedule for tomorrow
+    if (now > midday) {
+        midday.setDate(midday.getDate() + 1);
+    }
+    if (now > evening) {
+        evening.setDate(evening.getDate() + 1);
+    }
+    
+    // Calculate milliseconds until each check-in
+    const middayDelay = midday.getTime() - now.getTime();
+    const eveningDelay = evening.getTime() - now.getTime();
+    
+    console.log(`Next midday check-in in: ${Math.round(middayDelay / 1000 / 60)} minutes`);
+    console.log(`Next evening check-in in: ${Math.round(eveningDelay / 1000 / 60)} minutes`);
+    
+    // Schedule midday check-in
+    const middayTimer = setTimeout(() => {
+        performSimppleCheckIn('midday');
+        // Reschedule for next day
+        scheduleCheckIns();
+    }, middayDelay);
+    
+    // Schedule evening check-in
+    const eveningTimer = setTimeout(() => {
+        performSimpleCheckIn('evening');
+        // Reschedule for next day
+        scheduleCheckIns();
+    }, eveningDelay);
+    
+    checkInTimers.push(middayTimer, eveningTimer);
+}
+
+async function performSimpleCheckIn() {
+    console.log('Performing check-in...');
+    
+    try {
+        // 1. Get AI feedback and task progress from the new endpoint
+        const progressResponse = await fetch(`${API_BASE_URL}/task-progress-check`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        if (!progressResponse.ok) {
+            throw new Error(`Task progress check failed: ${progressResponse.status}`);
+        }
+        
+        const progressResult = await progressResponse.json();
+        console.log('Task progress result:', progressResult);
+        
+        // 2. CORRECTED potato logic with 50% threshold
+        const completionPercentage = progressResult.total_count > 0 ? 
+            (progressResult.completed_count / progressResult.total_count) : 0;
+
+        if (progressResult.total_count === 0) {
+            // No tasks exist - keep default potato
+        } else if (progressResult.completed_count === 0) {
+            // Zero tasks completed - maximum guilt trip
+            switchPotatoImage('no-task-complete', true);
+        } else if (completionPercentage < 0.5) {
+            // Less than half completed - continue guilt trip
+            switchPotatoImage('no-task-complete', true);
+        } else if (completionPercentage < 1.0) {
+            // More than half but not all - encouraging
+            switchPotatoImage('task-complete', true);
+        } else {
+            // All tasks completed - celebration
+            switchPotatoImage('task-clear', true);
+        }
+        
+        // 3. Display the AI message from task progress endpoint
+        if (progressResult.ai_message) {
+            typewriterEffect(progressResult.ai_message);
+        }
+        
+        
+    } catch (error) {
+        console.error('Check-in failed:', error);
+    }
+}
+
+
+// Function to manually trigger check-in (for testing)
+async function triggerManualCheckIn() {
+    console.log('Manual check-in triggered');
+    await performSimpleCheckIn('manual');
+}
+
+
 
 // Function to get all tasks
-// Replace your current getTasks function with this fixed version
 async function getTasks() {
     try {
         const tasks = await getTasksFromBackend();
@@ -157,9 +334,30 @@ async function getTasks() {
     }
 }
 
+function typewriterEffect(message) {
+  const aiElement = document.getElementById('ai-message');
+  
+  // Add this safety check
+  if (!aiElement) {
+    console.error('AI message element not found!');
+    return;
+  }
+
+  bouncePotatoForAI();
+  
+  aiElement.textContent = '';
+  
+  let i = 0;
+  const timer = setInterval(() => {
+    aiElement.textContent += message[i];
+    i++;
+    if (i >= message.length) clearInterval(timer);
+  }, 55);
+}
+
+
 
 //addTask function
-// Replace the localStorage addTask with this backend version
 async function addTask(taskData) {
     try {
         const backendTask = {
@@ -202,21 +400,28 @@ async function addTask(taskData) {
 async function toggleTask(taskId) {
     console.log('Toggling task:', taskId);
     
+    // ADD: Get the task element for animation
+    const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+    
     try {
+        // ADD: Trigger completion animation immediately
+        if (taskElement) {
+            taskElement.classList.add('completing');
+            // Remove animation class after it completes
+            setTimeout(() => taskElement.classList.remove('completing'), 800);
+        }
+        
         // Try to complete task on backend first
         const result = await completeTaskOnBackend(taskId);
         
         if (result && result.ai_message) {
-            // Update AI message from backend
-            const aiMessageElement = document.getElementById('ai-message');
-            if (aiMessageElement) {
-                aiMessageElement.textContent = result.ai_message;
-                console.log('AI response:', result.ai_message);
-            }
+            // WITH the typewriter effect:
+            typewriterEffect(result.ai_message);
+            console.log('AI response:', result.ai_message);
         }
         
-        // ALWAYS update the display, even when all tasks are complete
-        // Get fresh tasks from backend and reorder them
+        await checkAndUpdatePotatoState(result);
+
         const currentTasks = await getTasks();
         const reorderedTasks = reorderTasksByCompletion(currentTasks);
         
@@ -249,6 +454,40 @@ async function toggleTask(taskId) {
         }
     }
 }
+
+// Function to check and update potato state after task completion
+async function checkAndUpdatePotatoState(backendResult) {
+    try {
+        // Get current daily status to determine potato state
+        const response = await fetch('http://localhost:8000/daily-status');
+        const status = await response.json();
+        
+        console.log('=== POTATO STATE CHECK ===');
+        console.log('Tasks completed:', status.completed_count);
+        console.log('Total tasks:', status.total_count);
+        console.log('Daily quest completed:', status.quest_completed);
+        console.log('=== END DEBUG ===');
+        
+        // Determine appropriate potato state
+        if (status.completed_count === 0) {
+            // No tasks completed - keep default potato
+            console.log('No tasks completed - staying default');
+            return;
+        } else if (status.completed_count === status.total_count && status.quest_completed) {
+            // Perfect day achieved - celebration potato
+            console.log('Perfect day achieved - switching to task-clear potato');
+            switchPotatoImage('task-clear', true);
+        } else if (status.completed_count > 0) {
+            // Some tasks completed - celebration for individual task
+            console.log('Task completed - switching to task-complete potato');
+            switchPotatoImage('task-complete', true);
+        }
+        
+    } catch (error) {
+        console.error('Error checking potato state:', error);
+    }
+}
+
 
 
 
@@ -343,9 +582,12 @@ function showTaskList(tasks) {
             const isCompleted = task.completed || task.is_completed;
             taskItem.className = `task-item ${isCompleted ? 'completed' : ''}`;
             
+            // CRITICAL FIX: Put data-task-id on the CONTAINER, not the checkbox
+            taskItem.setAttribute('data-task-id', task.id);
+            
             // Build the task content with proper checkbox state
             let taskContent = `
-                <input type="checkbox" class="task-checkbox" data-task-id="${task.id}" ${isCompleted ? 'checked' : ''}>
+                <input type="checkbox" class="task-checkbox" ${isCompleted ? 'checked' : ''}>
                 <span class="task-name">${task.description || task.name}</span>
             `;
             // Add bell icon if task has reminder
@@ -367,9 +609,10 @@ function showTaskList(tasks) {
 
         // Add event listeners to checkboxes
         const checkboxes = taskListContainer.querySelectorAll('.task-checkbox');
-        checkboxes.forEach(checkbox => {
+        checkboxes.forEach((checkbox, index) => {
             checkbox.addEventListener('change', function() {
-                const taskId = parseInt(this.getAttribute('data-task-id'));
+                // Get task ID from the parent container instead
+                const taskId = parseInt(this.closest('.task-item').getAttribute('data-task-id'));
                 toggleTask(taskId);
             });
         });
@@ -400,9 +643,19 @@ function showTaskList(tasks) {
 }
 
 
+
 // Function to handle the home page (index.html) - COMPLETE VERSION
 async function setupHomePage() {
     console.log('Setting up home page...');
+
+        // INITIALIZE: Show default potato immediately when app loads
+    const defaultPotato = document.getElementById('potato-default');
+    if (defaultPotato) {
+        defaultPotato.style.display = 'block';
+        currentPotatoState = 'default';
+    }
+
+    scheduleCheckIns();
     
     // Check if we have tasks
     const currentTasks = await getTasks();
