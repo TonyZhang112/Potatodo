@@ -295,6 +295,7 @@ async function performSimpleCheckIn() {
             typewriterEffect(progressResult.ai_message);
         }
         
+
         
     } catch (error) {
         console.error('Check-in failed:', error);

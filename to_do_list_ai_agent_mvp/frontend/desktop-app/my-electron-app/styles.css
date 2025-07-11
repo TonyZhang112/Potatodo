@@ -108,7 +108,7 @@ body {
 .image-container {
     position: fixed;
     z-index: 2;
-    top: 3%; /* Move potato higher */
+    top: 2%; /* Move potato higher */
     bottom: 99%; /* Ensure it doesn't stick to the bottom */
     left: 50%;
     transform: translateX(-50%); /* Center the potato */
@@ -128,14 +128,14 @@ body {
 }
 
 #potato-no-task-complete {
-    width: 220px;
-    height: 140px;
+    width: 230px;
+    height: 150px;
     display:none; /* Hide by default */
 }
 
 #potato-task-clear {
-    width: 200px;
-    height: 130px;
+    width: 210px;
+    height: 140px;
    display:none; /* Hide by default */
 }
 
