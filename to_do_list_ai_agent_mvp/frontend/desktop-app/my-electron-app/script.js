@@ -236,7 +236,7 @@ function scheduleCheckIns() {
     
     // Schedule midday check-in
     const middayTimer = setTimeout(() => {
-        performSimppleCheckIn('midday');
+        performSimpleCheckIn('midday');
         // Reschedule for next day
         scheduleCheckIns();
     }, middayDelay);
