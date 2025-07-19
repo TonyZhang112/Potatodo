@@ -1,15 +1,19 @@
-// edit-task.js - Handles the edit task screen
+const API_BASE_URL = 'http://localhost:8000'; // Your FastAPI server URL
 
-// Function to load task data into edit form
 function loadTaskForEditing() {
     console.log('Loading task for editing...');
     
-    // Get the task data from localStorage
     const editingTaskData = localStorage.getItem('editingTask');
-    
     if (editingTaskData) {
         const task = JSON.parse(editingTaskData);
-        console.log('Task to edit:', task);
+        
+        // DEBUG: Let's see what we're actually getting
+        console.log('=== TASK DATA DEBUG ===');
+        console.log('Full task object:', task);
+        console.log('task.reminderMinutes:', task.reminderMinutes);
+        console.log('task.reminder_minutes:', task.reminder_minutes);
+        console.log('task.deadline:', task.deadline);
+        console.log('=== END DEBUG ===');
         
         // Populate the task name
         const taskNameInput = document.querySelector('textarea');
@@ -17,7 +21,7 @@ function loadTaskForEditing() {
             taskNameInput.value = task.name;
             console.log('Task name populated:', task.name);
         }
-        
+
         // Handle deadline display dynamically
         const deadlineButton = document.querySelector('.ddl-button');
         if (deadlineButton) {
@@ -38,21 +42,24 @@ function loadTaskForEditing() {
                 console.log('No deadline found - showing default button');
             }
         }
-        
-        // Handle reminder display dynamically
+
+        // Handle reminder display dynamically - MOVED TO CORRECT LEVEL
         const reminderButton = document.querySelector('.reminder-button');
         if (reminderButton) {
-            if (task.reminderMinutes) {
+            // Check both possible field names (frontend uses camelCase, backend uses snake_case)
+            const reminderMinutes = task.reminderMinutes || task.reminder_minutes;
+            
+            if (reminderMinutes) {
                 // Task has reminder - show the actual reminder
                 if (task.deadline) {
-                    reminderButton.textContent = `🔔 ${task.reminderMinutes} min before deadline`;
+                    reminderButton.textContent = `🔔 ${reminderMinutes} min before deadline`;
                 } else {
-                    reminderButton.textContent = `🔔 Remind in ${task.reminderMinutes} min`;
+                    reminderButton.textContent = `🔔 Remind in ${reminderMinutes} min`;
                 }
                 
                 // Store the reminder for editing
-                window.currentReminderMinutes = task.reminderMinutes;
-                console.log('Reminder loaded:', task.reminderMinutes);
+                window.currentReminderMinutes = reminderMinutes;
+                console.log('Reminder loaded:', reminderMinutes);
             } else {
                 // Task has no reminder - show default button
                 reminderButton.textContent = '🔔 Add Reminder';
@@ -60,15 +67,15 @@ function loadTaskForEditing() {
                 console.log('No reminder found - showing default button');
             }
         }
-        
+
         console.log('Form populated with task data');
         console.log('Current deadline:', window.currentDeadline);
         console.log('Current reminder:', window.currentReminderMinutes);
-        
     } else {
         console.error('No task data found for editing');
     }
 }
+
 
 function handleDeadlineClick() {
     console.log('Handling deadline click...');
@@ -506,9 +513,8 @@ function deleteReminder() {
 }
 
 // Function to save edited task
-function saveEditedTask() {
+async function saveEditedTask() {
     console.log('=== SAVE BUTTON CLICKED ===');
-    
     const editingTaskData = localStorage.getItem('editingTask');
     if (!editingTaskData) {
         console.error('No original task data found');
@@ -518,74 +524,120 @@ function saveEditedTask() {
     const originalTask = JSON.parse(editingTaskData);
     const taskNameInput = document.querySelector('textarea');
     const updatedName = taskNameInput ? taskNameInput.value.trim() : '';
-    
+
     if (!updatedName) {
         alert('Please enter a task name!');
         return;
     }
 
-    // Get all tasks from storage
-    const tasks = getTasks();
-    const taskIndex = tasks.findIndex(t => t.id === originalTask.id);
-    
-    if (taskIndex !== -1) {
-        // Update the task with new data including deadline and reminder
-        tasks[taskIndex].name = updatedName;
-        tasks[taskIndex].deadline = window.currentDeadline || null;
-        tasks[taskIndex].reminderMinutes = window.currentReminderMinutes || null;
-        tasks[taskIndex].hasReminder = window.currentReminderMinutes ? true : false;
-        
-        console.log('Task updated with:', {
-            name: updatedName,
-            deadline: window.currentDeadline,
-            reminderMinutes: window.currentReminderMinutes
+    const updatedData = {
+        description: updatedName,
+        deadline: window.currentDeadline ? new Date(window.currentDeadline).toISOString() : null,
+        reminder_minutes: window.currentReminderMinutes || null
+    };
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/tasks/${originalTask.id}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updatedData)
         });
+
+        if (response.ok) {
+            const result = await response.json();
+            console.log('Task updated successfully on backend:', result);
+            
+            // Schedule reminder timer if task has deadline and reminder
+            if (result.task && result.task.deadline && result.task.reminder_minutes) {
+                scheduleReminderTimer(result.task);
+            }
+            
+            localStorage.removeItem('editingTask');
+            window.currentDeadline = null;
+            window.currentReminderMinutes = null;
+            window.location.href = 'index.html';
+            
+        } else {
+            throw new Error(`Failed to update task: ${response.status}`);
+        }
         
-        // Save updated tasks back to localStorage
-        saveTasks(tasks);
+    } catch (error) {
+        console.error('Failed to update task on backend:', error);
         
-        // Clean up and return to main screen
+        // Fallback to localStorage
+        const tasks = getTasks();
+        const taskIndex = tasks.findIndex(t => t.id === originalTask.id);
+        if (taskIndex !== -1) {
+            tasks[taskIndex] = { 
+                ...tasks[taskIndex], 
+                name: updatedName,
+                deadline: window.currentDeadline,
+                reminderMinutes: window.currentReminderMinutes,
+                hasReminder: window.currentReminderMinutes ? true : false
+            };
+            saveTasks(tasks);
+        }
+        
         localStorage.removeItem('editingTask');
         window.currentDeadline = null;
         window.currentReminderMinutes = null;
-        
         window.location.href = 'index.html';
-    } else {
-        console.error('Task not found for updating');
     }
 }
 
 
 // Function to delete task
-function deleteTask() {
+async function deleteTask() {
     console.log('Deleting task...');
-    
     const editingTaskData = localStorage.getItem('editingTask');
     if (!editingTaskData) {
         console.error('No task data found for deletion');
         return;
     }
-    
+
     const taskToDelete = JSON.parse(editingTaskData);
     
-    // Confirm deletion
     if (confirm(`Are you sure you want to delete "${taskToDelete.name}"?`)) {
-        // Get all tasks
-        const tasks = getTasks();
-        
-        // Remove the task
-        const filteredTasks = tasks.filter(t => t.id !== taskToDelete.id);
-        
-        // Save updated tasks
-        saveTasks(filteredTasks);
-        
-        console.log('Task deleted successfully');
-        
-        // Clean up and return to main screen
-        localStorage.removeItem('editingTask');
-        window.location.href = 'index.html';
+        try {
+            const response = await fetch(`${API_BASE_URL}/tasks/${taskToDelete.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (response.ok) {
+                console.log('Task deleted successfully from backend');
+                
+                // Cancel any active reminder timer
+                if (activeReminderTimers.has(taskToDelete.id)) {
+                    clearTimeout(activeReminderTimers.get(taskToDelete.id));
+                    activeReminderTimers.delete(taskToDelete.id);
+                }
+                
+                localStorage.removeItem('editingTask');
+                window.location.href = 'index.html';
+                
+            } else {
+                throw new Error(`Failed to delete task: ${response.status}`);
+            }
+            
+        } catch (error) {
+            console.error('Failed to delete task from backend:', error);
+            
+            // Fallback to localStorage
+            const tasks = getTasks();
+            const filteredTasks = tasks.filter(t => t.id !== taskToDelete.id);
+            saveTasks(filteredTasks);
+            
+            localStorage.removeItem('editingTask');
+            window.location.href = 'index.html';
+        }
     }
 }
+
 
 // Function to handle back button
 function goBackToMain() {
@@ -653,6 +705,56 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Timer-based reminder system for edit-task
+let activeReminderTimers = new Map();
+
+function scheduleReminderTimer(task) {
+    if (!task.reminder_minutes) return; // Only need reminder_minutes to be set
+    
+    let reminderTime;
+    
+    if (task.deadline) {
+        // CONDITION 1: Reminder X minutes BEFORE deadline
+        const deadlineTime = new Date(task.deadline).getTime();
+        reminderTime = deadlineTime - (task.reminder_minutes * 60 * 1000);
+        console.log(`Reminder set for "${task.description}" ${task.reminder_minutes} minutes before deadline`);
+    } else {
+        // CONDITION 2: Reminder X minutes FROM NOW (not from creation time)
+        const now = Date.now();
+        reminderTime = now + (task.reminder_minutes * 60 * 1000);
+        console.log(`Reminder set for "${task.description}" ${task.reminder_minutes} minutes from now`);
+    }
+    
+    const now = Date.now();
+    
+    // Only set timer if reminder is in the future
+    if (reminderTime > now) {
+        const delay = reminderTime - now;
+        console.log(`Timer will fire in ${Math.round(delay/1000/60)} minutes`);
+        
+        const timerId = setTimeout(async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/reminder/${task.id}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.reminder) {
+                        typewriterEffect(data.reminder);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to get reminder message:', error);
+                typewriterEffect(`⏰ "${task.description}" reminder!`);
+            }
+            
+            activeReminderTimers.delete(task.id);
+        }, delay);
+        
+        activeReminderTimers.set(task.id, timerId);
+    } else {
+        console.log('Reminder time has already passed, not setting timer');
+    }
+}
 
 
 

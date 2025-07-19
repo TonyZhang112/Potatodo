@@ -178,12 +178,48 @@ body {
 }
 
 #daily-checkbox {
+     appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background-color: white !important;
+    border: 2px solid #836642 !important;
+    border-radius: 20% !important;
     position: fixed;
     left: 3%;
     margin-right: 5px;
     width: 15px;
     height: 15px;
     cursor: pointer;
+     transition: all 0.3s ease; /* Smooth animation */
+}
+
+#daily-checkbox:checked {
+    background-color: #CA9D67 !important;
+    border-color: #CA9D67 !important;
+    transform: scale(1.1); /* Slight scale on check */
+}
+
+#daily-checkbox:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 5px rgba(202, 157, 103, 0.3);
+}
+
+/* Add checkmark animation */
+#daily-checkbox:checked::after {
+    content: '✓';
+    position: absolute;
+    top: -2px;
+    left: 2px;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    animation: checkmarkPop 0.3s ease-in-out;
+}
+
+@keyframes checkmarkPop {
+    0% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(1.2); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
 }
 
 

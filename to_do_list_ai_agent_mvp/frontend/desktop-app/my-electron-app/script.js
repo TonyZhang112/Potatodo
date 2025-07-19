@@ -335,25 +335,83 @@ async function getTasks() {
     }
 }
 
-function typewriterEffect(message) {
-  const aiElement = document.getElementById('ai-message');
-  
-  // Add this safety check
-  if (!aiElement) {
-    console.error('AI message element not found!');
-    return;
-  }
+// Global variable to track the current typewriter timer
+let currentTypewriterTimer = null;
 
-  bouncePotatoForAI();
-  
-  aiElement.textContent = '';
-  
-  let i = 0;
-  const timer = setInterval(() => {
-    aiElement.textContent += message[i];
-    i++;
-    if (i >= message.length) clearInterval(timer);
-  }, 55);
+function typewriterEffect(message) {
+    const aiElement = document.getElementById('ai-message');
+    
+    // Add this safety check
+    if (!aiElement) {
+        console.error('AI message element not found!');
+        return;
+    }
+
+    // INTERRUPT: Clear any existing typewriter effect
+    if (currentTypewriterTimer) {
+        clearInterval(currentTypewriterTimer);
+        currentTypewriterTimer = null;
+    }
+
+    // Bounce the potato for the new message
+    bouncePotatoForAI();
+    
+    // Clear the message and start fresh
+    aiElement.textContent = '';
+    
+    let i = 0;
+    currentTypewriterTimer = setInterval(() => {
+        aiElement.textContent += message[i];
+        i++;
+        
+        // When message is complete, clear the timer reference
+        if (i >= message.length) {
+            clearInterval(currentTypewriterTimer);
+            currentTypewriterTimer = null;
+        }
+    }, 55);
+}
+
+
+
+function setupDailyTaskInput() {
+    const dailyInput = document.getElementById('daily-input');
+    
+    if (dailyInput) {
+        // Save on blur (when user clicks away)
+        dailyInput.addEventListener('blur', async function() {
+            const taskName = this.value.trim();
+            if (taskName && taskName !== '') {
+                try {
+                    // Use your existing backend endpoint
+                    const response = await fetch(`${API_BASE_URL}/daily-quests/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ quest_name: taskName })
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        console.log('Daily quest saved:', result);
+                        // showSavedIndicator(); ← REMOVED THIS LINE
+                    } else {
+                        console.error('Failed to save daily quest:', response.status);
+                    }
+                } catch (error) {
+                    console.error('Error saving daily quest:', error);
+                }
+            }
+        });
+        
+        // Also save on Enter key
+        dailyInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                this.blur(); // Trigger blur event
+            }
+        });
+    }
 }
 
 
@@ -368,8 +426,13 @@ async function addTask(taskData) {
         };
         
         const newTask = await createTaskOnBackend(backendTask);
+        
         if (newTask) {
-            // Convert backend format to frontend format
+            // Schedule reminder timer immediately when task is created
+            if (newTask.deadline && newTask.reminder_minutes) {
+                scheduleReminderTimer(newTask);
+            }
+            
             return {
                 id: newTask.id,
                 name: newTask.description,
@@ -381,7 +444,7 @@ async function addTask(taskData) {
         }
     } catch (error) {
         console.error('Failed to create task on backend:', error);
-        // Fallback to localStorage
+        // Your existing fallback code stays the same...
         const tasks = JSON.parse(localStorage.getItem('potatodo-tasks') || '[]');
         const newTask = {
             id: Date.now(),
@@ -398,8 +461,15 @@ async function addTask(taskData) {
 }
 
 
+
 async function toggleTask(taskId) {
     console.log('Toggling task:', taskId);
+
+    if (activeReminderTimers.has(taskId)) {
+        clearTimeout(activeReminderTimers.get(taskId));
+        activeReminderTimers.delete(taskId);
+        console.log('Reminder timer cancelled for completed task');
+    }
     
     // ADD: Get the task element for animation
     const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
@@ -489,10 +559,6 @@ async function checkAndUpdatePotatoState(backendResult) {
     }
 }
 
-
-
-
-// Function to reorder tasks: incomplete tasks first, completed tasks at bottom
 function reorderTasksByCompletion(tasks) {
     // From the search results: separate active and completed tasks
     const incompleteTasks = tasks.filter(task => !task.completed);
@@ -501,6 +567,8 @@ function reorderTasksByCompletion(tasks) {
     // Return incomplete tasks first, then completed tasks at bottom
     return [...incompleteTasks, ...completedTasks];
 }
+
+
 
 // Function to handle edit task - passes task data to edit screen
 async function editTask(taskId) {
@@ -643,23 +711,106 @@ function showTaskList(tasks) {
     }
 }
 
+function setupDailyTaskCheckbox() {
+    const dailyCheckbox = document.getElementById('daily-checkbox');
+    
+    if (dailyCheckbox) {
+        dailyCheckbox.addEventListener('change', async function() {
+            const isCompleted = this.checked;
+            
+            try {
+                if (isCompleted) {
+                    // Use your existing complete endpoint
+                    const response = await fetch(`${API_BASE_URL}/daily-quests/complete`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        console.log('Daily quest completed:', result);
+                        
+                        // Show AI message if provided
+                        if (result.ai_message) {
+                            typewriterEffect(result.ai_message);
+                        }
+                        
+                        // Update potato state for daily quest completion
+                        switchPotatoImage('task-complete', true);
+                    } else {
+                        console.error('Failed to complete daily quest:', response.status);
+                        // Revert checkbox on error
+                        this.checked = false;
+                    }
+                } else {
+                    // Handle unchecking - you might want to add an endpoint for this
+                    console.log('Daily quest unchecked');
+                }
+            } catch (error) {
+                console.error('Error updating daily quest:', error);
+                // Revert checkbox state on error
+                this.checked = !isCompleted;
+            }
+        });
+    }
+}
 
+async function loadExistingDailyQuest() {
+    try {
+        // Use your existing GET endpoint
+        const response = await fetch(`${API_BASE_URL}/daily-quests/`);
+        if (response.ok) {
+            const data = await response.json();
+            const dailyQuest = data.daily_quest;
+            
+            if (dailyQuest) {
+                const dailyInput = document.getElementById('daily-input');
+                const dailyCheckbox = document.getElementById('daily-checkbox');
+                
+                if (dailyInput && dailyQuest.quest_name) {
+                    dailyInput.value = dailyQuest.quest_name;
+                    dailyInput.placeholder = dailyQuest.quest_name;
+                }
+                
+                if (dailyCheckbox) {
+                    dailyCheckbox.checked = dailyQuest.is_completed;
+                }
+            }
+        } else {
+            console.error('Failed to load daily quest:', response.status);
+        }
+    } catch (error) {
+        console.error('Error loading daily quest:', error);
+    }
+}
 
 // Function to handle the home page (index.html) - COMPLETE VERSION
 async function setupHomePage() {
     console.log('Setting up home page...');
 
-        // INITIALIZE: Show default potato immediately when app loads
+    // INITIALIZE: Show default potato immediately when app loads
     const defaultPotato = document.getElementById('potato-default');
     if (defaultPotato) {
         defaultPotato.style.display = 'block';
         currentPotatoState = 'default';
     }
 
+    const currentTasks = await getTasks();
+    currentTasks.forEach(task => {
+        if (!task.completed && !task.is_completed) {
+            scheduleReminderTimer(task);
+        }
+    });
+
     scheduleCheckIns();
     
-    // Check if we have tasks
-    const currentTasks = await getTasks();
+    // ADD: Setup daily task functionality
+    setupDailyTaskInput();
+    setupDailyTaskCheckbox();
+    await loadExistingDailyQuest();
+    
     
     if (currentTasks.length === 0) {
         // Show empty state and ensure button works
@@ -681,6 +832,7 @@ async function setupHomePage() {
         showTaskList(currentTasks);
     }
 }
+
     
 // Function to handle the add task page - WITH NAVIGATION RESTORED
 async function setupAddTaskPage() {
@@ -1196,6 +1348,58 @@ function deleteReminder() {
     
     console.log('Reminder deleted');
 }
+
+// Timer-based reminder system
+let activeReminderTimers = new Map();
+
+function scheduleReminderTimer(task) {
+    if (!task.reminder_minutes) return; // Only need reminder_minutes to be set
+    
+    let reminderTime;
+    
+    if (task.deadline) {
+        // CONDITION 1: Reminder X minutes BEFORE deadline
+        const deadlineTime = new Date(task.deadline).getTime();
+        reminderTime = deadlineTime - (task.reminder_minutes * 60 * 1000);
+        console.log(`Reminder set for "${task.description}" ${task.reminder_minutes} minutes before deadline`);
+    } else {
+        // CONDITION 2: Reminder X minutes FROM NOW (not from creation time)
+        const now = Date.now();
+        reminderTime = now + (task.reminder_minutes * 60 * 1000);
+        console.log(`Reminder set for "${task.description}" ${task.reminder_minutes} minutes from now`);
+    }
+    
+    const now = Date.now();
+    
+    // Only set timer if reminder is in the future
+    if (reminderTime > now) {
+        const delay = reminderTime - now;
+        console.log(`Timer will fire in ${Math.round(delay/1000/60)} minutes`);
+        
+        const timerId = setTimeout(async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/reminder/${task.id}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.reminder) {
+                        typewriterEffect(data.reminder);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to get reminder message:', error);
+                typewriterEffect(`⏰ "${task.description}" reminder!`);
+            }
+            
+            activeReminderTimers.delete(task.id);
+        }, delay);
+        
+        activeReminderTimers.set(task.id, timerId);
+    } else {
+        console.log('Reminder time has already passed, not setting timer');
+    }
+}
+
+
 
 
 // Function to handle the edit task page

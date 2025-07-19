@@ -27,6 +27,8 @@ class Task(BaseModel):
     is_completed: bool = False
     deadline: Optional[datetime.datetime] = Field(default=None)
     reminder_minutes: Optional[int] = Field(default=None)
+    created_at: Optional[datetime.datetime] = Field(default_factory=datetime.datetime.now)  # ADD THIS
+
 
 def convert_to_user_timezone(dt, user_timezone="UTC"):
     if isinstance(dt, str):
@@ -64,18 +66,21 @@ def today_string():
     return datetime.datetime.now().strftime("%Y-%m-%d")
 
 # Daily Quest Management
+class DailyQuestCreate(BaseModel):
+    quest_name: str
+
 @app.post("/daily-quests/")
-def create_daily_quest(quest_name: str):
+def create_daily_quest(quest_data: DailyQuestCreate):
     daily_quests.clear()
-    quest_data = {
+    quest_dict = {
         "id": 1,
-        "quest_name": quest_name,
+        "quest_name": quest_data.quest_name,
         "is_completed": False,
         "created_date": datetime.datetime.now().strftime("%Y-%m-%d"),
         "last_completed_date": None
-    }  # FIXED: Added missing closing brace
-    daily_quests.append(quest_data)
-    return {"message": "Daily quest created!", "quest": quest_data}
+    }
+    daily_quests.append(quest_dict)
+    return {"message": "Daily quest created!", "quest": quest_dict}
 
 @app.get("/daily-quests/")
 def get_daily_quest():
@@ -133,6 +138,11 @@ def add_task(task: Task):
     task_data = task.model_dump()
     task_data["id"] = len(todo_list) + 1
     task_data["name"] = task_data["description"]
+    
+     # Ensure created_at is set
+    if not task_data.get("created_at"):
+        task_data["created_at"] = datetime.datetime.now()
+
     print(f"Received task data: {task_data}")
     # Ensure reminder_minutes is properly handled
     if "reminder_minutes" not in task_data or task_data["reminder_minutes"] is None:
@@ -413,31 +423,62 @@ def generate_reminder(task_status: str):
     ai_text = ai_text.replace('\n', ' ').replace('\r', ' ')
     return ai_text
 
-@app.get("/reminder")
-def get_reminder():
-    user_timezone = user_stats.timezone
-    now = datetime.datetime.now(ZoneInfo(user_timezone))
-    warning_window = datetime.timedelta(minutes=30)
-    upcoming_tasks = []
+@app.get("/reminder/{task_id}")
+def get_task_reminder(task_id: int):
+    """Get AI reminder message for a specific task"""
+    try:
+        user_timezone = user_stats.timezone
+        now = datetime.datetime.now(ZoneInfo(user_timezone))
+        
+        target_task = None
+        for task in todo_list:
+            if task["id"] == task_id and not task["is_completed"]:
+                target_task = task
+                break
+        
+        if not target_task:
+            return {"reminder": "Task not found or already completed! 🎉"}
+        
+        # Generate different prompts based on reminder type
+        if target_task.get("deadline"):
+            # Deadline-based reminder
+            task_deadline = convert_to_user_timezone(target_task["deadline"], user_timezone)
+            prompt = f"""
+            Task "{target_task['description']}" is due at {task_deadline.strftime('%I:%M %p')}. Write ONE urgent but encouraging reminder 
+            message under 50 characters.
+            """
+        else:
+            # Time-based reminder (no deadline)
+            prompt = f"""
+            The user wanted to be reminded about this Task "{target_task['description']}". Write ONE friendly reminder 
+            message under 50 characters.
+            """
+        
+        response = genai_client.models.generate_content(
+            model="gemini-2.5-flash-lite-preview-06-17",
+            contents=prompt
+        )
+        
+        return {"reminder": response.text.strip()}
+        
+    except Exception as e:
+        print(f"ERROR in get_task_reminder: {type(e).__name__}: {str(e)}")
+        return {"reminder": f"⏰ Don't forget: {target_task['description'] if 'target_task' in locals() else 'your task'}!"}
+
+@app.patch("/tasks/{task_id}")
+def update_task_details(task_id: int, task: Task):
+    """Update task details (description, deadline, reminder)"""
+    for existing_task in todo_list:
+        if existing_task["id"] == task_id:
+            # Update only the fields that are provided
+            existing_task["description"] = task.description
+            existing_task["deadline"] = task.deadline
+            existing_task["reminder_minutes"] = task.reminder_minutes
+            
+            return {
+                "message": "Task updated successfully!",
+                "task": existing_task
+            }
     
-    for task in todo_list:
-        if task["is_completed"] or not task.get("deadline"):
-            continue
-        task_deadline = convert_to_user_timezone(task["deadline"], user_timezone)
-        if now < task_deadline <= now + warning_window:
-            upcoming_tasks.append(task)
-    
-    if upcoming_tasks:
-        upcoming_context = "\n".join([
-            f'- "{t["description"]}" is due at {convert_to_user_timezone(t["deadline"], user_timezone).strftime("%I:%M %p")}'
-            for t in upcoming_tasks
-        ])
-        task_status = f"Tasks due soon: {upcoming_context}. Write ONE urgent reminder sentence under 100 characters."
-        return {"reminder": generate_reminder(task_status)}
-    
-    incomplete_tasks = [task for task in todo_list if not task["is_completed"]]
-    if len(incomplete_tasks) > 0:
-        task_status = f"User has {len(incomplete_tasks)} incomplete tasks. Write ONE motivating sentence under 100 characters."
-        return {"reminder": generate_reminder(task_status)}
-    
-    return {"reminder": "You're doing great! All caught up. 🎉"}
+    raise HTTPException(status_code=404, detail="Task not found")
+
