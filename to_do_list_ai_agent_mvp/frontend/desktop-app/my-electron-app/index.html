@@ -12,8 +12,8 @@
     <div class="title">
         <h1>Potatodo v0.01b</h1>
     </div>
-    <div class = "streak">
-        <img src="asset/streak.png" alt="Streak Icon" id="streak-icon">
+    <div class="streak" id="streak-display">
+    <span id="streak-count">0</span> 🍟
     </div>
     <div class="ai-companion">
         <div class="image-container">
@@ -26,7 +26,36 @@
             <div id="ai-message">What's the plan?</div>
         </div>
     </div>
+    <!-- Celebration Modal Overlay (initially hidden) -->
+    <div id="celebration-overlay" class="celebration-overlay hidden">
+        <div class="celebration-backdrop"></div>
+        <div class="celebration-modal">
+            <div class="celebration-content">
+                <!-- 1. Happy Celebration Potato -->
+                <div class="celebration-potato">
+                    <img src="asset/excited.png" alt="Celebration Potato" id="celebration-potato-image">
+                </div>
+                
+                <!-- 2. AI Message with Typewriter Effect -->
+                <div class="celebration-message">
+                    <p id="celebration-ai-text"></p>
+                </div>
+                
+                <!-- 3. Streak Button -->
+                <button id="streak-button" class="streak-button">
+                    Streak + 1 !
+                </button>
+            </div>
+        </div>
+    </div>
 
+    <!-- Call It a Day Button (initially hidden) -->
+    <div id="call-it-a-day-container" class="call-it-a-day-container hidden">
+        <button id="call-it-a-day-button" class="call-it-a-day-button">
+            Call It a Day! 
+        </button>
+    </div>
+    
     <div class = "daily-task">
         <input type="checkbox" id="daily-checkbox">
         <input type="text" id="daily-input" placeholder="add daily task">

@@ -116,6 +116,24 @@ async function getStreakFromBackend() {
     }
 }
 
+async function updateStreakDisplay() {
+    try {
+        const streakData = await getStreakFromBackend();
+        const streakElement = document.getElementById('streak-count');
+        
+        if (streakElement && streakData) {
+            streakElement.textContent = streakData.current_streak || 0;
+            console.log('Streak updated:', streakData.current_streak);
+        }
+    } catch (error) {
+        console.error('Failed to update streak display:', error);
+        // Fallback to show 0
+        const streakElement = document.getElementById('streak-count');
+        if (streakElement) {
+            streakElement.textContent = '0';
+        }
+    }
+}
 
 // Wait for the page to fully load before running our JavaScript
 document.addEventListener('DOMContentLoaded', async function() {
@@ -146,7 +164,7 @@ function switchPotatoImage(newState, revertAfterDelay = false) {
     
     const allPotatoes = [
         'potato-default',
-        'potato-task-complete', 
+        'potato-task-complete',
         'potato-task-clear',
         'potato-no-task-complete'
     ];
@@ -154,7 +172,7 @@ function switchPotatoImage(newState, revertAfterDelay = false) {
     // Hide only the potatoes we're NOT switching to
     allPotatoes.forEach(id => {
         const img = document.getElementById(id);
-        if (img && id !== `potato-${newState}`) {  // Only hide if it's NOT the target
+        if (img && id !== `potato-${newState}`) {
             img.style.display = 'none';
             img.classList.remove('bounce-in');
         }
@@ -164,21 +182,20 @@ function switchPotatoImage(newState, revertAfterDelay = false) {
     const newPotato = document.getElementById(`potato-${newState}`);
     if (newPotato) {
         newPotato.style.display = 'block';
-        // Trigger bounce animation
         setTimeout(() => {
             newPotato.classList.add('bounce-in');
         }, 50);
-        
         currentPotatoState = newState;
-        
-        // Set revert timer if requested
-        if (revertAfterDelay && newState !== 'default') {
-            potatoRevertTimer = setTimeout(() => {
-                switchPotatoImage('default', false);
-            }, 60000); // 1 minute
-        }
+    }
+    
+    // MODIFIED: Only set revert timer for certain states (NOT no-task-complete)
+    if (revertAfterDelay && newState !== 'default' && newState !== 'no-task-complete') {
+        potatoRevertTimer = setTimeout(() => {
+            switchPotatoImage('default', false);
+        }, 60000); // 1 minute
     }
 }
+
 
 // Function to trigger potato bounce (for AI messages)
 function bouncePotatoForAI() {
@@ -255,7 +272,6 @@ async function performSimpleCheckIn() {
     console.log('Performing check-in...');
     
     try {
-        // 1. Get AI feedback and task progress from the new endpoint
         const progressResponse = await fetch(`${API_BASE_URL}/task-progress-check`, {
             method: 'POST',
             headers: {
@@ -263,44 +279,28 @@ async function performSimpleCheckIn() {
             }
         });
         
-        if (!progressResponse.ok) {
-            throw new Error(`Task progress check failed: ${progressResponse.status}`);
+        if (progressResponse.ok) {
+            const progressResult = await progressResponse.json();
+            console.log('Check-in result:', progressResult);
+            
+            // Check if this is a motivation note (0 tasks completed)
+            const isMotivationNote = progressResult.completed_count === 0 && progressResult.total_count > 0;
+            
+            // Display AI message with or without reversion
+            if (isMotivationNote) {
+                // Don't schedule revert for motivation notes
+                typewriterEffect(progressResult.ai_message, 'ai-message', false);
+                scheduleAIMessageRevert(true); // Skip revert explicitly
+            } else {
+                // Normal AI message with 1-minute revert
+                typewriterEffect(progressResult.ai_message, 'ai-message', true);
+            }
         }
-        
-        const progressResult = await progressResponse.json();
-        console.log('Task progress result:', progressResult);
-        
-        // 2. CORRECTED potato logic with 50% threshold
-        const completionPercentage = progressResult.total_count > 0 ? 
-            (progressResult.completed_count / progressResult.total_count) : 0;
-
-        if (progressResult.total_count === 0) {
-            // No tasks exist - keep default potato
-        } else if (progressResult.completed_count === 0) {
-            // Zero tasks completed - maximum guilt trip
-            switchPotatoImage('no-task-complete', true);
-        } else if (completionPercentage < 0.5) {
-            // Less than half completed - continue guilt trip
-            switchPotatoImage('no-task-complete', true);
-        } else if (completionPercentage < 1.0) {
-            // More than half but not all - encouraging
-            switchPotatoImage('task-complete', true);
-        } else {
-            // All tasks completed - celebration
-            switchPotatoImage('task-clear', true);
-        }
-        
-        // 3. Display the AI message from task progress endpoint
-        if (progressResult.ai_message) {
-            typewriterEffect(progressResult.ai_message);
-        }
-        
-
-        
     } catch (error) {
         console.error('Check-in failed:', error);
     }
 }
+
 
 
 // Function to manually trigger check-in (for testing)
@@ -338,39 +338,51 @@ async function getTasks() {
 // Global variable to track the current typewriter timer
 let currentTypewriterTimer = null;
 
-function typewriterEffect(message) {
-    const aiElement = document.getElementById('ai-message');
-    
-    // Add this safety check
-    if (!aiElement) {
-        console.error('AI message element not found!');
+function typewriterEffect(message, targetElementId = 'ai-message', scheduleRevert = true) {
+    // Your existing safety checks...
+    if (!message || typeof message !== 'string') {
+        console.error('typewriterEffect: Invalid message provided:', message);
         return;
     }
-
-    // INTERRUPT: Clear any existing typewriter effect
+    
+    const targetElement = document.getElementById(targetElementId);
+    if (!targetElement) {
+        console.error(`typewriterEffect: Element '${targetElementId}' not found`);
+        return;
+    }
+    
+    // Clear any existing typewriter timer
     if (currentTypewriterTimer) {
         clearInterval(currentTypewriterTimer);
         currentTypewriterTimer = null;
     }
-
-    // Bounce the potato for the new message
-    bouncePotatoForAI();
     
-    // Clear the message and start fresh
-    aiElement.textContent = '';
+    // Bounce potato for regular AI messages
+    if (targetElementId === 'ai-message') {
+        bouncePotatoForAI();
+    }
     
+    // Your existing typewriter animation code...
+    targetElement.textContent = '';
     let i = 0;
+    
     currentTypewriterTimer = setInterval(() => {
-        aiElement.textContent += message[i];
+        targetElement.textContent += message.charAt(i);
         i++;
         
-        // When message is complete, clear the timer reference
         if (i >= message.length) {
             clearInterval(currentTypewriterTimer);
             currentTypewriterTimer = null;
+            
+            // ADDED: Schedule AI message reversion (only for regular AI messages)
+            if (targetElementId === 'ai-message' && scheduleRevert) {
+                scheduleAIMessageRevert();
+            }
         }
     }, 55);
 }
+
+
 
 
 
@@ -540,9 +552,13 @@ async function checkAndUpdatePotatoState(backendResult) {
         console.log('=== END DEBUG ===');
         
         // Determine appropriate potato state
-        if (status.completed_count === 0) {
-            // No tasks completed - keep default potato
-            console.log('No tasks completed - staying default');
+        if (status.completed_count === 0 && status.total_count > 0) {
+            // FIXED: User has tasks but completed ZERO - show disappointed potato
+            console.log('No tasks completed but tasks exist - switching to no-task-complete potato');
+            switchPotatoImage('no-task-complete', false); // Note: false to prevent auto-revert
+        } else if (status.completed_count === 0 && status.total_count === 0) {
+            // No tasks at all - keep default potato
+            console.log('No tasks exist - staying default');
             return;
         } else if (status.completed_count === status.total_count && status.quest_completed) {
             // Perfect day achieved - celebration potato
@@ -554,10 +570,13 @@ async function checkAndUpdatePotatoState(backendResult) {
             switchPotatoImage('task-complete', true);
         }
         
+        await checkAndShowCallItADayButton();
+        
     } catch (error) {
         console.error('Error checking potato state:', error);
     }
 }
+
 
 function reorderTasksByCompletion(tasks) {
     // From the search results: separate active and completed tasks
@@ -786,6 +805,34 @@ async function loadExistingDailyQuest() {
     }
 }
 
+// Global timer for AI message reversion
+let aiMessageRevertTimer = null;
+
+// Revert AI message back to default after delay
+function scheduleAIMessageRevert(skipRevert = false) {
+    // Clear any existing timer
+    if (aiMessageRevertTimer) {
+        clearTimeout(aiMessageRevertTimer);
+        aiMessageRevertTimer = null;
+    }
+    
+    // Skip revert for motivation notes (when user completed 0 tasks)
+    if (skipRevert) {
+        console.log('Skipping AI message revert - keeping motivation note visible');
+        return;
+    }
+    
+    // Schedule revert to default message after 1 minute
+    aiMessageRevertTimer = setTimeout(() => {
+        const aiElement = document.getElementById('ai-message');
+        if (aiElement) {
+            typewriterEffect("What's the plan?");
+        }
+        aiMessageRevertTimer = null;
+    }, 60000); // 1 minute = 60,000 milliseconds
+}
+
+
 // Function to handle the home page (index.html) - COMPLETE VERSION
 async function setupHomePage() {
     console.log('Setting up home page...');
@@ -811,7 +858,6 @@ async function setupHomePage() {
     setupDailyTaskCheckbox();
     await loadExistingDailyQuest();
     
-    
     if (currentTasks.length === 0) {
         // Show empty state and ensure button works
         showEmptyState();
@@ -831,8 +877,13 @@ async function setupHomePage() {
         // Show task list (which includes the round + button)
         showTaskList(currentTasks);
     }
-}
+    
+    await updateStreakDisplay();
 
+    setupCallItADayButton();
+
+    scheduleMidnightReset();
+}
     
 // Function to handle the add task page - WITH NAVIGATION RESTORED
 async function setupAddTaskPage() {
@@ -1399,9 +1450,6 @@ function scheduleReminderTimer(task) {
     }
 }
 
-
-
-
 // Function to handle the edit task page
 function setupEditTaskPage() {
     console.log('Setting up edit task page...');
@@ -1416,5 +1464,227 @@ function setupEditTaskPage() {
         });
     } else {
         console.error('Back button not found!');
+    }
+}
+
+// Function to check if "Call It a Day" button should be shown
+async function checkAndShowCallItADayButton() {
+    console.log('=== DEBUG: checkAndShowCallItADayButton called ===');
+    try {
+        const currentTasks = await getTasks();
+        const allTasksComplete = currentTasks.length > 0 && currentTasks.every(task => 
+            task.completed || task.is_completed
+        );
+        
+        // Check daily quest status
+        const dailyQuestComplete = await checkDailyQuestStatus();
+        
+        // Show button only if both conditions are met
+        const shouldShowButton = allTasksComplete && dailyQuestComplete;
+        
+        const buttonContainer = document.getElementById('call-it-a-day-container');
+        if (buttonContainer) {
+            if (shouldShowButton) {
+                buttonContainer.classList.remove('hidden');
+            } else {
+                buttonContainer.classList.add('hidden');
+            }
+        }
+        
+        return shouldShowButton;
+        
+    } catch (error) {
+        console.error('Error checking Call It a Day button status:', error);
+        return false;
+    }
+}
+
+// Update your existing setupCallItADayButton function
+function setupCallItADayButton() {
+    // Existing "Call It a Day" button handler
+    const callItADayButton = document.getElementById('call-it-a-day-button');
+    if (callItADayButton) {
+        callItADayButton.addEventListener('click', function() {
+            console.log('Call It a Day button clicked!');
+            showCelebrationModal();
+        });
+    }
+    
+    // ADD THIS: Streak+1 button handler
+    const streakButton = document.getElementById('streak-button');
+    if (streakButton) {
+        streakButton.addEventListener('click', handleStreakIncrement);
+    }
+    
+    // Optional: Close modal when clicking backdrop
+    const backdrop = document.querySelector('.celebration-backdrop');
+    if (backdrop) {
+        backdrop.addEventListener('click', () => {
+            document.getElementById('celebration-overlay').classList.add('hidden');
+        });
+    }
+}
+
+
+// Helper function to check daily quest completion
+async function checkDailyQuestStatus() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/daily-status`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        if (response.ok) {
+            const status = await response.json();
+            return status.quest_completed || false;
+        }
+    } catch (error) {
+        console.error('Error checking daily quest status:', error);
+    }
+    return false;
+}
+
+
+// Show celebration modal when everything is complete
+async function showCelebrationModal() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/call-it-a-day`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        if (response.ok) {
+            const celebrationData = await response.json();
+            
+            // Show modal
+            const overlay = document.getElementById('celebration-overlay');
+            overlay.classList.remove('hidden');
+            
+            // FIXED: Specify the correct element ID for celebration
+            typewriterEffect(celebrationData.celebration_message, 'celebration-ai-text');
+            
+        } else {
+            console.error('Failed to get celebration message');
+        }
+    } catch (error) {
+        console.error('Error showing celebration modal:', error);
+    }
+}
+
+// Handle Streak+1 button click
+async function handleStreakIncrement() {
+    try {
+        console.log('Streak+1 button clicked!');
+        
+        // Call your existing /check-in endpoint to increment streak
+        const response = await fetch(`${API_BASE_URL}/check-in`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            console.log('Streak incremented:', result);
+            
+            // Hide celebration modal
+            const overlay = document.getElementById('celebration-overlay');
+            overlay.classList.add('hidden');
+            
+            // ADD THIS LINE: Hide the "Call It a Day" button
+            const callItADayContainer = document.getElementById('call-it-a-day-container');
+            if (callItADayContainer) {
+                callItADayContainer.classList.add('hidden');
+            }
+            
+            // Update streak display on home screen
+            await updateStreakDisplay();
+            
+            // Optional: Show brief confirmation
+            console.log(`New streak: ${result.streak} days!`);
+            
+        } else {
+            console.error('Failed to increment streak:', response.status);
+        }
+        
+    } catch (error) {
+        console.error('Error incrementing streak:', error);
+    }
+}
+
+
+// Schedule midnight reset functionality
+function scheduleMidnightReset() {
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0); // Set to midnight
+    
+    const timeUntilMidnight = tomorrow.getTime() - now.getTime();
+    
+    console.log(`Midnight reset scheduled in ${Math.round(timeUntilMidnight / 1000 / 60)} minutes`);
+    
+    setTimeout(async () => {
+        await performMidnightReset();
+        // Schedule the next midnight reset (24 hours later)
+        scheduleMidnightReset();
+    }, timeUntilMidnight);
+}
+
+// Execute the midnight reset
+async function performMidnightReset() {
+    try {
+        console.log('🌙 Performing midnight reset...');
+        
+        const response = await fetch(`${API_BASE_URL}/midnight-reset`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            console.log('✅ Midnight reset completed:', result);
+            
+            // Refresh the UI to show empty state
+            const currentTasks = await getTasks();
+            showTaskList(currentTasks);
+            
+            // Reset potato to default state
+            switchPotatoImage('default');
+            
+            // Update daily quest display
+            await loadExistingDailyQuest();
+            
+            // Optional: Show brief notification to user if they're awake
+            showMidnightResetNotification(result);
+            
+        } else {
+            console.error('Failed to perform midnight reset:', response.status);
+        }
+        
+    } catch (error) {
+        console.error('Error during midnight reset:', error);
+    }
+}
+
+// Optional: Show notification if user is active during reset
+function showMidnightResetNotification(resetResult) {
+    // Only show if user seems to be actively using the app
+    if (document.hasFocus()) {
+        const notification = {
+            message: `🌙 Fresh start! Cleared ${resetResult.tasks_cleared} tasks for tomorrow`,
+            type: 'midnight-reset'
+        };
+        
+        // You could integrate this with your existing notification system
+        // or simply log it
+        console.log('Midnight Reset:', notification.message);
     }
 }

@@ -331,6 +331,14 @@ def daily_check_in():
             "quest_completed": quest_completed
         }
 
+@app.get("/streak")
+async def get_streak():
+    return {
+        'current_streak': user_stats.current_streak,
+        'longest_streak': user_stats.longest_streak,
+        'status': 'success'
+    }
+
 
 @app.get("/character/stats")
 def get_character_stats():
@@ -369,7 +377,7 @@ def call_it_a_day():
     # This is just for celebration - streak already moved in /check-in
     today = today_string()
     
-    celebration_context = f"User completed ALL tasks and daily quest! Perfect day! Current streak: {user_stats.current_streak} days. Write ONE funny and exaggerated celebration sentence under 100 characters."
+    celebration_context = f"User completed ALL tasks and daily quest! Perfect day! Current streak: {user_stats.current_streak} days. Write ONE SUPER HYPE and funny Potato food joke celebration sentence under 100 characters."
     ai_celebration = generate_reminder(celebration_context)
     
     return {
@@ -377,7 +385,7 @@ def call_it_a_day():
         "current_streak": user_stats.current_streak,
         "longest_streak": user_stats.longest_streak,
         "perfect_day": True
-    }  # FIXED: Added missing closing brace
+    } 
 
 # UPDATED: Improved persona for shorter responses
 persona = """
@@ -387,7 +395,7 @@ Motivate with one-liner zingers: guilt-trippy, passive-aggressive, deadpan jokes
 
 Rules:
 - Always be hilarious and catooneish
-- Make sure user feels gooood about their task completion
+- SUPER HYPER about their task completion
 — use potato humor and jokes
 - One sentence only
 - Never use more than 75 characters
@@ -481,4 +489,39 @@ def update_task_details(task_id: int, task: Task):
             }
     
     raise HTTPException(status_code=404, detail="Task not found")
+
+@app.post("/midnight-reset")
+async def midnight_reset():
+    """Reset all tasks and daily quest at midnight for fresh start"""
+    try:
+        global todo_list, daily_quests
+        
+        # Count what we're clearing for logging
+        tasks_cleared = len(todo_list)
+        quest_cleared = len(daily_quests)
+        
+        # Clear all tasks
+        todo_list.clear()
+        
+        # Clear/uncheck daily quest
+        if daily_quests:
+            daily_quests[0]["is_completed"] = False
+            daily_quests[0]["completed_at"] = None
+        
+        return {
+            "status": "success",
+            "message": "Midnight reset completed",
+            "tasks_cleared": tasks_cleared,
+            "daily_quest_reset": quest_cleared > 0,
+            "reset_timestamp": datetime.datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        print(f"Error during midnight reset: {e}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "tasks_cleared": 0,
+            "daily_quest_reset": False
+        }
 
