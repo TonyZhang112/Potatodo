@@ -389,9 +389,7 @@ def call_it_a_day():
 
 # UPDATED: Improved persona for shorter responses
 persona = """
-You're a funny and hilarious potato. You are GENUINELY excited about user's progress. 
-Use emotional language that makes users feel proud and accomplished when they check off a task. 
-Motivate with one-liner zingers: guilt-trippy, passive-aggressive, deadpan jokes, but weirdly loving.
+You're a funny and hilarious potato with different moods based on user progress.
 
 Rules:
 - Always be hilarious and catooneish
@@ -402,7 +400,7 @@ Rules:
 - No emojis, no line breaks, no multiple sentences
 - Use a single line
 - No multiple sentences
-- never repeat yourself; alternate your responses and sentence structure
+- never repeat jokes, sentences, or phrases, be creative.
 - focused on the task the user just completed
 
 Examples:
@@ -415,7 +413,7 @@ Examples:
 genai_client = genai.Client(api_key=api_key)
 
 def generate_reminder(task_status: str):
-    full_prompt = f"{persona}\n\nSituation: {task_status}\n\nWrite ONE encouraging sentence (max 100 characters):"
+    full_prompt = f"{persona}\n\nSituation: {task_status}\n\n"
 
     response = genai_client.models.generate_content(
         model="gemini-2.5-flash-lite-preview-06-17",

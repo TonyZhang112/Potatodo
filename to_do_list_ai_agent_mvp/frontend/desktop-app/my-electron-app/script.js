@@ -270,7 +270,6 @@ function scheduleCheckIns() {
 
 async function performSimpleCheckIn() {
     console.log('Performing check-in...');
-    
     try {
         const progressResponse = await fetch(`${API_BASE_URL}/task-progress-check`, {
             method: 'POST',
@@ -278,28 +277,46 @@ async function performSimpleCheckIn() {
                 'Content-Type': 'application/json',
             }
         });
-        
+
         if (progressResponse.ok) {
             const progressResult = await progressResponse.json();
             console.log('Check-in result:', progressResult);
+
+            // ADD THIS: Determine potato emotion based on progress
+            let potatoEmotion = 'default';
             
-            // Check if this is a motivation note (0 tasks completed)
-            const isMotivationNote = progressResult.completed_count === 0 && progressResult.total_count > 0;
-            
-            // Display AI message with or without reversion
-            if (isMotivationNote) {
-                // Don't schedule revert for motivation notes
-                typewriterEffect(progressResult.ai_message, 'ai-message', false);
-                scheduleAIMessageRevert(true); // Skip revert explicitly
-            } else {
-                // Normal AI message with 1-minute revert
+            if (progressResult.completed_count === 0 && progressResult.total_count > 0) {
+                // User has tasks but completed zero - disappointed potato
+                potatoEmotion = 'no-task-complete';
+            } else if (progressResult.all_complete) {
+                // All tasks done - celebration potato
+                potatoEmotion = 'task-clear';
+            } else if (progressResult.completed_count > 0) {
+                // Some progress made - encouraging potato
+                potatoEmotion = 'task-complete';
+            }
+
+            // Display AI message
+            if (progressResult.ai_message) {
                 typewriterEffect(progressResult.ai_message, 'ai-message', true);
             }
+
+            // ADD THIS: Switch potato emotion
+            switchPotatoImage(potatoEmotion, true); // Use revert for most states
+            
+            // Special handling for no-task-complete (don't revert)
+            if (potatoEmotion === 'no-task-complete') {
+                switchPotatoImage(potatoEmotion, false); // Don't revert disappointed potato
+            }
+
+        } else {
+            console.error('Check-in failed:', progressResponse.status);
         }
     } catch (error) {
         console.error('Check-in failed:', error);
     }
 }
+
 
 
 
