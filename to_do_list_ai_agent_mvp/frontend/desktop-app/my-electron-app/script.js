@@ -58,6 +58,38 @@ async function createTaskOnBackend(taskData) {
     }
 }
 
+async function requestNotificationPermission() {
+    console.log('Requesting notification permission...');
+    if ('Notification' in window) {
+        console.log('Current permission:', Notification.permission);
+        if (Notification.permission === 'default') {
+            const permission = await Notification.requestPermission();
+            console.log('New permission:', permission);
+            return permission === 'granted';
+        }
+        return Notification.permission === 'granted';
+    }
+    console.log('Notification API not available');
+    return false;
+}
+
+// Add this test function to your script.js
+function testBasicNotification() {
+    console.log('Testing basic notification...');
+    if (Notification.permission === 'granted') {
+        new Notification('Test Notification', {
+            body: 'This is a test notification from your Electron app',
+        });
+    } else {
+        console.log('Notification permission not granted');
+    }
+}
+
+// Call this in your console or add a test button
+// testBasicNotification();
+
+
+
 // Complete task on backend and get AI response
 async function completeTaskOnBackend(taskId) {
     try {
@@ -152,6 +184,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         setupEditTaskPage();
     }
 });
+
+
 
 function switchPotatoImage(newState, revertAfterDelay = false) {
     console.log(`Switching potato to: ${newState}`);
@@ -280,37 +314,34 @@ async function performSimpleCheckIn() {
 
         if (progressResponse.ok) {
             const progressResult = await progressResponse.json();
-            console.log('Check-in result:', progressResult);
-
-            // ADD THIS: Determine potato emotion based on progress
-            let potatoEmotion = 'default';
             
+            // Determine potato emotion based on progress
+            let potatoEmotion = 'default';
             if (progressResult.completed_count === 0 && progressResult.total_count > 0) {
-                // User has tasks but completed zero - disappointed potato
                 potatoEmotion = 'no-task-complete';
             } else if (progressResult.all_complete) {
-                // All tasks done - celebration potato
                 potatoEmotion = 'task-clear';
             } else if (progressResult.completed_count > 0) {
-                // Some progress made - encouraging potato
                 potatoEmotion = 'task-complete';
             }
 
-            // Display AI message
+            // Create notification with backend content and dynamic icon
             if (progressResult.ai_message) {
+                new Notification('Daily Check-in', {
+                    body: progressResult.ai_message,
+                    tag: 'daily-checkin'
+                });
                 typewriterEffect(progressResult.ai_message, 'ai-message', true);
             }
 
-            // ADD THIS: Switch potato emotion
-            switchPotatoImage(potatoEmotion, true); // Use revert for most states
-            
-            // Special handling for no-task-complete (don't revert)
+            // Update UI
+            switchPotatoImage(potatoEmotion, true);
             if (potatoEmotion === 'no-task-complete') {
-                switchPotatoImage(potatoEmotion, false); // Don't revert disappointed potato
+                switchPotatoImage(potatoEmotion, false);
             }
 
-        } else {
-            console.error('Check-in failed:', progressResponse.status);
+            // MOVE THIS LINE HERE - inside the successful response block
+            await checkAndUpdatePotatoState(progressResult);
         }
     } catch (error) {
         console.error('Check-in failed:', error);
@@ -318,10 +349,8 @@ async function performSimpleCheckIn() {
 }
 
 
-
-
 // Function to manually trigger check-in (for testing)
-async function triggerManualCheckIn() {
+async function manualCheckIn() { 
     console.log('Manual check-in triggered');
     await performSimpleCheckIn('manual');
 }
@@ -900,6 +929,9 @@ async function setupHomePage() {
     setupCallItADayButton();
 
     scheduleMidnightReset();
+
+    await requestNotificationPermission();
+
 }
     
 // Function to handle the add task page - WITH NAVIGATION RESTORED
@@ -1421,28 +1453,20 @@ function deleteReminder() {
 let activeReminderTimers = new Map();
 
 function scheduleReminderTimer(task) {
-    if (!task.reminder_minutes) return; // Only need reminder_minutes to be set
-    
+    if (!task.reminder_minutes) return;
+
     let reminderTime;
-    
     if (task.deadline) {
-        // CONDITION 1: Reminder X minutes BEFORE deadline
         const deadlineTime = new Date(task.deadline).getTime();
         reminderTime = deadlineTime - (task.reminder_minutes * 60 * 1000);
-        console.log(`Reminder set for "${task.description}" ${task.reminder_minutes} minutes before deadline`);
     } else {
-        // CONDITION 2: Reminder X minutes FROM NOW (not from creation time)
         const now = Date.now();
         reminderTime = now + (task.reminder_minutes * 60 * 1000);
-        console.log(`Reminder set for "${task.description}" ${task.reminder_minutes} minutes from now`);
     }
-    
+
     const now = Date.now();
-    
-    // Only set timer if reminder is in the future
     if (reminderTime > now) {
         const delay = reminderTime - now;
-        console.log(`Timer will fire in ${Math.round(delay/1000/60)} minutes`);
         
         const timerId = setTimeout(async () => {
             try {
@@ -1450,22 +1474,33 @@ function scheduleReminderTimer(task) {
                 if (response.ok) {
                     const data = await response.json();
                     if (data.reminder) {
+ 
+                        
+                        // Create notification with dynamic icon
+                        new Notification('Task Reminder', {
+                            body: data.reminder,
+                            tag: `reminder-${task.id}` // Prevents duplicate notifications
+                        });
+                        
                         typewriterEffect(data.reminder);
                     }
                 }
             } catch (error) {
                 console.error('Failed to get reminder message:', error);
+                // Fallback notification with default icon
+                new Notification('Task Reminder', {
+                    body: `⏰ "${task.description}" reminder!`,
+                });
                 typewriterEffect(`⏰ "${task.description}" reminder!`);
             }
-            
             activeReminderTimers.delete(task.id);
         }, delay);
         
         activeReminderTimers.set(task.id, timerId);
-    } else {
-        console.log('Reminder time has already passed, not setting timer');
     }
 }
+
+
 
 // Function to handle the edit task page
 function setupEditTaskPage() {

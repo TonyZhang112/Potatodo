@@ -22,6 +22,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "message": "FastAPI backend is running"}
+
+
 class Task(BaseModel):
     description: str
     is_completed: bool = False
@@ -451,13 +456,13 @@ def get_task_reminder(task_id: int):
             task_deadline = convert_to_user_timezone(target_task["deadline"], user_timezone)
             prompt = f"""
             Task "{target_task['description']}" is due at {task_deadline.strftime('%I:%M %p')}. Write ONE urgent but encouraging reminder 
-            message under 50 characters.
+            message under 75 characters.
             """
         else:
             # Time-based reminder (no deadline)
             prompt = f"""
             The user wanted to be reminded about this Task "{target_task['description']}". Write ONE friendly reminder 
-            message under 50 characters.
+            message under 75 characters.
             """
         
         response = genai_client.models.generate_content(
